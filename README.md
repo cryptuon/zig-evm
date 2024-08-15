@@ -1,5 +1,7 @@
 # Ethereum Virtual Machine (EVM) in Zig
 
+<Breaking changes everyday, do not use in production!>
+
 This project is an experimental implementation of the Ethereum Virtual Machine (EVM) using the Zig programming language. It aims to provide a lightweight, modular, and educational EVM implementation for learning and experimentation purposes.
 
 ## Features

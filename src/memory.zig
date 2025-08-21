@@ -2,19 +2,44 @@ const std = @import("std");
 
 // EVM Memory implementation
 pub const Memory = struct {
-    data: std.ArrayList(u8),
+    data: std.ArrayListUnmanaged(u8),
 
     pub fn init(allocator: std.mem.Allocator) Memory {
+        _ = allocator; // Suppress unused parameter warning
         return Memory{
-            .data = std.ArrayList(u8).init(allocator),
+            .data = .{},
         };
     }
 
-    pub fn store(self: *Memory, offset: usize, value: []const u8) !void {
-        try self.data.replaceRange(offset, value.len, value);
+    pub fn deinit(self: *Memory, allocator: std.mem.Allocator) void {
+        self.data.deinit(allocator);
     }
 
-    pub fn load(self: Memory, offset: usize, len: usize) []const u8 {
+    pub fn store(self: *Memory, allocator: std.mem.Allocator, offset: usize, value: []const u8) !void {
+        // Ensure memory is large enough
+        const required_size = offset + value.len;
+        if (required_size > self.data.items.len) {
+            try self.data.resize(allocator, required_size);
+        }
+        
+        // Copy value to memory
+        for (value, 0..) |byte, i| {
+            self.data.items[offset + i] = byte;
+        }
+    }
+
+    pub fn load(self: *Memory, allocator: std.mem.Allocator, offset: usize, len: usize) ![]const u8 {
+        // Ensure memory is large enough
+        const required_size = offset + len;
+        if (required_size > self.data.items.len) {
+            // In EVM, reading from uninitialized memory returns zeros
+            const result = try allocator.alloc(u8, len);
+            for (result) |*byte| {
+                byte.* = 0;
+            }
+            return result;
+        }
+        
         return self.data.items[offset .. offset + len];
     }
 

@@ -1,4 +1,4 @@
-// File: src/opcodes/add.zig
+// File: src/opcodes/mul.zig
 
 const std = @import("std");
 const EVM = @import("../main.zig").EVM;
@@ -7,7 +7,7 @@ const Opcode = @import("../main.zig").Opcode;
 
 pub fn getImpl() struct { code: u8, impl: OpcodeImpl } {
     return .{
-        .code = @intFromEnum(Opcode.ADD),
+        .code = @intFromEnum(Opcode.MUL),
         .impl = OpcodeImpl{
             .execute = execute,
         },
@@ -17,7 +17,7 @@ pub fn getImpl() struct { code: u8, impl: OpcodeImpl } {
 fn execute(evm: *EVM) !void {
     if (evm.stack.pop()) |b| {
         if (evm.stack.pop()) |a| {
-            try evm.stack.push(evm.allocator, a.add(b));
+            try evm.stack.push(evm.allocator, a.mul(b));
         } else return error.StackUnderflow;
     } else return error.StackUnderflow;
 }

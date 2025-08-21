@@ -97,7 +97,7 @@ pub const Opcode = enum(u8) {
 };
 
 pub const OpcodeImpl = struct {
-    execute: fn (*EVM) anyerror!void,
+    execute: *const fn (*EVM) anyerror!void,
 };
 
 pub const Transaction = struct {
@@ -145,33 +145,34 @@ pub const EVM = struct {
     }
 
     pub fn deinit(self: *EVM) void {
-        self.stack.deinit();
-        self.memory.deinit();
+        self.stack.deinit(self.allocator);
+        self.memory.deinit(self.allocator);
         self.opcodes.deinit();
         self.accounts.deinit();
         self.allocator.destroy(self);
     }
 
     pub fn loadOpcodes(self: *EVM) !void {
-        var dir = try fs.cwd().openDir("src/opcodes", .{});
-        defer dir.close();
-
-        var dir_iterator = dir.iterate();
-        while (try dir_iterator.next()) |entry| {
-            if (entry.kind != .File or !std.mem.endsWith(u8, entry.name, ".zig")) {
-                continue;
-            }
-
-            const opcode_module = try std.zig.build.CreateModule.loadFromFile(self.allocator, entry.name);
-            const opcode_impl = @import(opcode_module).getImpl();
-            const opcode = @intToEnum(Opcode, opcode_impl.code);
-            try self.opcodes.put(opcode, opcode_impl.impl);
-        }
+        // Manually register opcodes
+        const add_impl = @import("opcodes/add.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(add_impl.code), add_impl.impl);
+        
+        const mul_impl = @import("opcodes/mul.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(mul_impl.code), mul_impl.impl);
+        
+        const push1_impl = @import("opcodes/push1.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(push1_impl.code), push1_impl.impl);
+        
+        const stop_impl = @import("opcodes/stop.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(stop_impl.code), stop_impl.impl);
+        
+        const pop_impl = @import("opcodes/pop.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(pop_impl.code), pop_impl.impl);
     }
 
     pub fn execute(self: *EVM) !void {
         while (self.pc < self.code.len) {
-            const opcode = @intToEnum(Opcode, self.code[self.pc]);
+            const opcode = @as(Opcode, @enumFromInt(self.code[self.pc]));
             self.pc += 1;
 
             const impl = self.opcodes.get(opcode) orelse return error.UnknownOpcode;
@@ -212,7 +213,11 @@ pub const EVM = struct {
             };
             // Generate new address (simplified for this example)
             var new_address: [20]u8 = undefined;
-            std.crypto.hash.Sha256.hash(&transaction.from, &new_address, .{});
+            var hash: [32]u8 = undefined;
+            std.crypto.hash.sha2.Sha256.hash(&transaction.from, &hash, .{});
+            for (0..20) |i| {
+                new_address[i] = hash[i];
+            }
             try self.accounts.put(new_address, new_account);
         }
     }
@@ -233,6 +238,8 @@ pub const EVM = struct {
     }
 };
 
+// When used as an executable, we provide a main function
+// When used as a library, this function won't be called
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -241,19 +248,19 @@ pub fn main() !void {
     var evm = try EVM.init(allocator);
     defer evm.deinit();
 
-    // Example transaction
-    const from_address: [20]u8 = [_]u8{1} ** 20;
-    const to_address: [20]u8 = [_]u8{2} ** 20;
-    const transaction = Transaction{
-        .from = from_address,
-        .to = to_address,
-        .value = BigInt.init(100),
-        .data = &[_]u8{ 0x60, 0x03, 0x60, 0x04, 0x01, 0x60, 0x02, 0x02, 0x00 }, // PUSH1 3, PUSH1 4, ADD, PUSH1 2, MUL, STOP
-        .gas_limit = 21000,
-        .gas_price = BigInt.init(1),
-    };
+    // Directly test our opcodes
+    const bytecode = &[_]u8{ 0x60, 0x03, 0x60, 0x04, 0x01, 0x60, 0x02, 0x02, 0x00 }; // PUSH1 3, PUSH1 4, ADD, PUSH1 2, MUL, STOP
+    evm.code = bytecode;
+    evm.pc = 0;
+    
+    try evm.execute();
 
-    try evm.applyTransaction(transaction);
-
-    std.debug.print("Transaction applied successfully\n", .{});
+    std.debug.print("Execution completed successfully\n", .{});
+    
+    // Print the result of our computation
+    if (evm.stack.pop()) |result| {
+        std.debug.print("Result: {d}\n", .{result.data[0]});
+    } else {
+        std.debug.print("Stack is empty\n", .{});
+    }
 }

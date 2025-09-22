@@ -20,4 +20,5 @@ comptime {
     _ = @import("tests/test_swap_ops.zig");
     _ = @import("tests/test_env_ops.zig");
     _ = @import("tests/test_gas_tracking.zig");
+    _ = @import("tests/test_parallel_execution.zig");
 }

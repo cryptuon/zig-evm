@@ -60,6 +60,60 @@ pub fn build(b: *std.Build) void {
     const run_parallel_opt_step = b.step("parallel-opt", "Run optimized parallel execution demo");
     run_parallel_opt_step.dependOn(&run_parallel_opt_cmd.step);
 
+    // Quick benchmark
+    const benchmark_exe = b.addExecutable(.{
+        .name = "benchmark",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/quick_benchmark.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+    b.installArtifact(benchmark_exe);
+
+    const run_benchmark_cmd = b.addRunArtifact(benchmark_exe);
+    run_benchmark_cmd.step.dependOn(b.getInstallStep());
+
+    const run_benchmark_step = b.step("benchmark", "Run quick optimization benchmarks");
+    run_benchmark_step.dependOn(&run_benchmark_cmd.step);
+
+    // Simple benchmark
+    const simple_benchmark_exe = b.addExecutable(.{
+        .name = "simple-benchmark",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/simple_benchmark.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+    b.installArtifact(simple_benchmark_exe);
+
+    const run_simple_benchmark_cmd = b.addRunArtifact(simple_benchmark_exe);
+    run_simple_benchmark_cmd.step.dependOn(b.getInstallStep());
+
+    const run_simple_benchmark_step = b.step("bench", "Run simple optimization benchmark");
+    run_simple_benchmark_step.dependOn(&run_simple_benchmark_cmd.step);
+
+    // Standalone benchmark demo
+    const benchmark_demo_exe = b.addExecutable(.{
+        .name = "benchmark-demo",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/benchmark_demo.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+    b.installArtifact(benchmark_demo_exe);
+
+    const run_benchmark_demo_cmd = b.addRunArtifact(benchmark_demo_exe);
+    run_benchmark_demo_cmd.step.dependOn(b.getInstallStep());
+
+    const run_benchmark_demo_step = b.step("demo", "Run optimization results demo");
+    run_benchmark_demo_step.dependOn(&run_benchmark_demo_cmd.step);
+
     // Tests
     const tests = b.addTest(.{
         .root_module = b.createModule(.{

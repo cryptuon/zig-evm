@@ -458,20 +458,23 @@ pub const MemoryPool = struct {
         defer self.mutex.unlock();
 
         if (size <= SMALL_SIZE) {
-            if (self.small_blocks.popOrNull()) |block| {
-                return block[0..size];
+            if (self.small_blocks.items.len > 0) {
+                const block = self.small_blocks.pop();
+                return block[0..@min(size, block.len)];
             }
-            return try self.allocator.alloc(u8, SMALL_SIZE);
+            return try self.allocator.alloc(u8, @max(size, SMALL_SIZE));
         } else if (size <= MEDIUM_SIZE) {
-            if (self.medium_blocks.popOrNull()) |block| {
-                return block[0..size];
+            if (self.medium_blocks.items.len > 0) {
+                const block = self.medium_blocks.pop();
+                return block[0..@min(size, block.len)];
             }
-            return try self.allocator.alloc(u8, MEDIUM_SIZE);
+            return try self.allocator.alloc(u8, @max(size, MEDIUM_SIZE));
         } else if (size <= LARGE_SIZE) {
-            if (self.large_blocks.popOrNull()) |block| {
-                return block[0..size];
+            if (self.large_blocks.items.len > 0) {
+                const block = self.large_blocks.pop();
+                return block[0..@min(size, block.len)];
             }
-            return try self.allocator.alloc(u8, LARGE_SIZE);
+            return try self.allocator.alloc(u8, @max(size, LARGE_SIZE));
         } else {
             // For very large allocations, use direct allocation
             return try self.allocator.alloc(u8, size);

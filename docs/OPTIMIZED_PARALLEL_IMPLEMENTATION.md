@@ -1,8 +1,8 @@
-# Optimized Parallel Execution Implementation - Zig EVM
+# Parallel Execution Implementation
 
 ## Overview
 
-This document describes the completed optimized parallel execution implementation for the Zig EVM. Building upon our theoretical foundations, we have successfully implemented a production-ready parallel execution system with significant performance improvements.
+This document describes the parallel execution implementation for the Zig EVM, providing technical details on the architecture and optimizations that enable concurrent transaction processing.
 
 ## Table of Contents
 
@@ -18,32 +18,32 @@ This document describes the completed optimized parallel execution implementatio
 
 ## Implementation Summary
 
-### ✅ **Completed Optimizations**
+### Key Optimizations
 
-#### 1. **Hash-Based Dependency Analysis (O(n) vs O(n²))**
-- **Before**: O(n²) transaction conflict detection
-- **After**: O(n) hash-map based conflict detection
-- **Improvement**: 10-100x faster dependency analysis for large batches
+#### 1. Hash-Based Dependency Analysis
+- Implementation: O(n) hash-map based conflict detection
+- Replaces: O(n²) transaction conflict detection
+- Performance gain: 10-100x faster dependency analysis for large transaction batches
 
-#### 2. **Work-Stealing Thread Pool**
-- **Before**: Simple thread pool with central work queue
-- **After**: Work-stealing with per-thread queues and load balancing
-- **Improvement**: 2-4x better thread utilization
+#### 2. Work-Stealing Thread Pool
+- Architecture: Per-thread work queues with load balancing
+- Benefits: Improved thread utilization and reduced contention
+- Performance gain: 2-4x better thread utilization
 
-#### 3. **Speculative Execution with Rollback**
-- **Before**: Conservative execution with strict dependency ordering
-- **After**: Optimistic execution with checkpoint/rollback system
-- **Improvement**: 20-40% higher throughput for independent transactions
+#### 3. Speculative Execution with Rollback
+- Implementation: Checkpoint-based state snapshots with rollback capability
+- Benefits: Optimistic execution with automatic conflict resolution
+- Performance gain: 20-40% higher throughput for independent transactions
 
-#### 4. **Memory Pool Optimization**
-- **Before**: Direct allocations for all operations
-- **After**: Pooled memory management with size classes
-- **Improvement**: 30-60% reduction in allocation overhead
+#### 4. Memory Pool Optimization
+- Implementation: Pooled memory management with size classes
+- Replaces: Direct allocations for all operations
+- Performance gain: 30-60% reduction in allocation overhead
 
-#### 5. **Adaptive Execution Strategy**
-- **Before**: Fixed execution approach
-- **After**: Dynamic strategy selection based on conflict patterns
-- **Improvement**: Optimal performance across varying workloads
+#### 5. Adaptive Execution Strategy
+- Implementation: Dynamic strategy selection based on transaction conflict patterns
+- Benefits: Optimizes execution approach for different workload characteristics
+- Performance gain: Consistent optimal performance across varying workloads
 
 ---
 

@@ -32,16 +32,38 @@ pub const Memory = struct {
         // Ensure memory is large enough
         const required_size = offset + len;
         if (required_size > self.data.items.len) {
-            // In EVM, reading from uninitialized memory returns zeros
-            const result = try allocator.alloc(u8, len);
-            for (result) |*byte| {
+            const old_len = self.data.items.len;
+            try self.data.resize(allocator, required_size);
+            // Initialize new memory to zero
+            for (self.data.items[old_len..]) |*byte| {
                 byte.* = 0;
             }
-            return result;
         }
-        
+
         return self.data.items[offset .. offset + len];
     }
 
-    // Add more memory operations as needed
+    pub fn loadWord(self: *Memory, allocator: std.mem.Allocator, offset: usize) ![]const u8 {
+        // Load a 32-byte word from memory
+        return self.load(allocator, offset, 32);
+    }
+
+    pub fn storeByte(self: *Memory, allocator: std.mem.Allocator, offset: usize, value: u8) !void {
+        // Ensure memory is large enough
+        const required_size = offset + 1;
+        if (required_size > self.data.items.len) {
+            const old_len = self.data.items.len;
+            try self.data.resize(allocator, required_size);
+            // Initialize new memory to zero
+            for (self.data.items[old_len..]) |*byte| {
+                byte.* = 0;
+            }
+        }
+
+        self.data.items[offset] = value;
+    }
+
+    pub fn size(self: *Memory) usize {
+        return self.data.items.len;
+    }
 };

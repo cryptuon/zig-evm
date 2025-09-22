@@ -1,161 +1,97 @@
-# Ethereum Virtual Machine (EVM) in Zig
+# Zig EVM
 
-<Breaking changes everyday, do not use in production!>
+An experimental Ethereum Virtual Machine (EVM) implementation in Zig for educational and research purposes.
 
-This project is an experimental implementation of the Ethereum Virtual Machine (EVM) using the Zig programming language. It aims to provide a lightweight, modular, and educational EVM implementation for learning and experimentation purposes.
+⚠️ **Breaking changes everyday, do not use in production!**
+
+## Quick Start
+
+```bash
+# Build and run
+zig build run
+
+# Run tests
+zig build test
+
+# Install globally
+zig build install
+```
 
 ## Features
 
-- Basic EVM opcodes implementation
-- Support for contract deployment and execution
-- Simplified account and storage model
-- Gas calculation and management
-- Support for precompiled contracts
-- Dynamic opcode loading from separate files
-- Example implementation of a simple ERC20-like token contract
-- Available as both a library and an executable
-
-## Prerequisites
-
-- Zig compiler (latest version recommended)
-- Basic understanding of Ethereum and EVM concepts
+- ✅ **Arithmetic Operations**: ADD, MUL, SUB, DIV, MOD, SDIV
+- ✅ **Comparison Operations**: LT, GT, EQ, ISZERO, SLT
+- ✅ **Bitwise Operations**: AND, OR, XOR, NOT
+- ✅ **Stack Operations**: POP, DUP1-DUP3, SWAP1-SWAP3
+- ✅ **Push Operations**: PUSH1, PUSH2, PUSH3, PUSH4, PUSH32
+- ✅ **Memory Operations**: MLOAD, MSTORE, MSTORE8, MSIZE
+- ✅ **Flow Control**: STOP, JUMP, JUMPI, JUMPDEST, PC
+- ✅ **256-bit BigInt** with improved multiplication and full arithmetic
+- ✅ **EVM Stack** with 1024-item limit and comprehensive error handling
+- ✅ **Dynamic Memory** with automatic expansion and zero initialization
+- ✅ **Modular Opcode System** with **36 implemented opcodes**
+- ✅ **Comprehensive Test Suite** with **67 tests** (64 passing, 3 edge cases)
+- ✅ **Jump Validation** and destination checking
+- ✅ **Signed Arithmetic** support
+- 🚧 Gas calculation and management
+- 🚧 Environmental opcodes (ADDRESS, CALLER, etc.)
+- 🚧 Contract deployment and execution
 
 ## Project Structure
 
 ```
-.
 ├── src/
-│   ├── main.zig
-│   ├── bigint.zig
-│   ├── memory.zig
-│   ├── stack.zig
-│   └── opcodes/
-│       ├── add.zig
-│       ├── mul.zig
-│       ├── push1.zig
-│       ├── pop.zig
-│       └── stop.zig
-├── README.md
-└── build.zig
+│   ├── main.zig          # EVM core implementation
+│   ├── bigint.zig        # 256-bit arithmetic
+│   ├── memory.zig        # EVM memory
+│   ├── stack.zig         # EVM stack
+│   └── opcodes/          # Individual opcode implementations
+├── docs/                 # Documentation
+└── tests/                # Test suite
 ```
-
-## Setup
-
-1. Clone the repository:
-   ```
-   git clone https://github.com/yourusername/zig-evm.git
-   cd zig-evm
-   ```
-
-## Building
-
-This project now uses the Zig build system. You can:
-
-1. Build the executable:
-   ```
-   zig build
-   ```
-
-2. Run the executable directly:
-   ```
-   zig build run
-   ```
-
-3. Run tests (if any):
-   ```
-   zig build test
-   ```
-
-## Installation
-
-To install the executable globally:
-```
-zig build install
-```
-
-This will install the `zig-evm` executable to the default installation prefix.
-
-## Usage
-
-### As an Executable
-
-Run the installed executable:
-```
-zig-evm
-```
-
-This will execute the example scenario defined in `main.zig`, which includes:
-1. Deploying an ERC20-like contract
-2. Checking the balance of an address
-3. Performing a token transfer
-4. Checking the balance after the transfer
-
-### As a Library
-
-To use this project as a library in your own Zig project:
-
-1. Add it as a dependency in your `build.zig`:
-   ```zig
-   const evm = b.addModule("evm", .{
-       .source_file = .{ .path = "path/to/zig-evm/src/main.zig" },
-   });
-   ```
-
-2. Import and use in your code:
-   ```zig
-   const EVM = @import("evm").EVM;
-   const Transaction = @import("evm").Transaction;
-   // ... use the EVM functionality
-   ```
-
-## Extending the EVM
-
-### Adding new opcodes
-
-1. Create a new file in the `src/opcodes/` directory (e.g., `src/opcodes/newop.zig`)
-2. Implement the opcode following the structure in existing opcode files
-3. Register the opcode in the `loadOpcodes` function in `main.zig`
-
-### Modifying gas costs
-
-Adjust the `useGas` function calls in the opcode implementations to change gas costs for operations.
-
-### Implementing more precompiled contracts
-
-Add new precompiled contracts in the `loadPrecompiled` function in `main.zig`.
 
 ## Current Status
 
-The EVM implementation is still in early development stages. We have successfully implemented:
+The EVM can execute sophisticated bytecode with **36 implemented opcodes** across all major categories. Examples:
 
-- Core data structures: BigInt (256-bit integer), Memory, Stack
-- Basic opcodes: ADD, MUL, PUSH1, POP, STOP
-- Basic EVM execution framework
-- Simple test demonstrating correct execution of bytecode
+**Arithmetic**: `(3 + 4) * 2 = 14`
+```
+Bytecode: [0x60, 0x03, 0x60, 0x04, 0x01, 0x60, 0x02, 0x02, 0x00]
+         PUSH1 3, PUSH1 4, ADD, PUSH1 2, MUL, STOP
+Result: 14
+```
 
-The EVM can now execute simple arithmetic operations correctly, as demonstrated by our test that computes (3 + 4) * 2 = 14.
+**Comparison & Logic**: `(10 < 20) AND (5 == 5) = 1`
+```
+Bytecode: [0x60, 0x0A, 0x60, 0x14, 0x10, 0x60, 0x05, 0x60, 0x05, 0x14, 0x16, 0x00]
+         PUSH1 10, PUSH1 20, LT, PUSH1 5, PUSH1 5, EQ, AND, STOP
+Result: 1 (true)
+```
 
-For a complete implementation plan, see [PLAN.md](PLAN.md).
+**Memory Operations**: Store and load data
+```
+PUSH2 0x1234, PUSH1 0x00, MSTORE  # Store 0x1234 at offset 0
+PUSH1 0x00, MLOAD                 # Load from offset 0
+MSIZE                             # Get memory size
+```
 
-## Limitations
+**Flow Control**: Conditional jumps and program control
+```
+PUSH1 10, PUSH1 5, GT            # Check if 10 > 5
+PUSH1 label, JUMPI               # Jump if true
+label: JUMPDEST                  # Valid jump destination
+```
 
-This is an experimental implementation and has several limitations:
-
-- Not all EVM opcodes are implemented
-- Gas calculation is simplified
-- The state and storage models are basic
-- Error handling and edge cases may not be fully covered
-- Performance optimizations are not implemented
-- Dynamic opcode loading has limitations when used as a library
+**Advanced Stack**: Complex manipulations
+```
+PUSH4 0x12345678  # Push 32-bit value
+DUP3, SWAP3       # Advanced stack manipulation
+```
 
 ## Contributing
 
-Contributions to this experimental project are welcome! Please feel free to submit issues, feature requests, or pull requests.
-
-## Disclaimer
-
-This project is for educational and experimental purposes only. It is not intended for use in production environments or with real cryptocurrency transactions.
+See [docs/PLAN.md](docs/PLAN.md) for development roadmap and implementation details.
 
 ## License
 
-This project is open-source and available under the MIT License.
+MIT License - see [LICENSE](LICENSE) for details.

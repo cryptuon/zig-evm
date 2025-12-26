@@ -114,6 +114,79 @@ pub fn build(b: *std.Build) void {
     const run_benchmark_demo_step = b.step("demo", "Run optimization results demo");
     run_benchmark_demo_step.dependOn(&run_benchmark_demo_cmd.step);
 
+    // Comprehensive benchmark suite
+    const full_benchmark_exe = b.addExecutable(.{
+        .name = "full-benchmark",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/benchmark.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+    b.installArtifact(full_benchmark_exe);
+
+    const run_full_benchmark_cmd = b.addRunArtifact(full_benchmark_exe);
+    run_full_benchmark_cmd.step.dependOn(b.getInstallStep());
+
+    const run_full_benchmark_step = b.step("bench-full", "Run comprehensive benchmark suite");
+    run_full_benchmark_step.dependOn(&run_full_benchmark_cmd.step);
+
+    // Ethereum Compliance Test Runner
+    const compliance_exe = b.addExecutable(.{
+        .name = "compliance-tests",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tests/run_compliance.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+    b.installArtifact(compliance_exe);
+
+    const run_compliance_cmd = b.addRunArtifact(compliance_exe);
+    run_compliance_cmd.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run_compliance_cmd.addArgs(args);
+    }
+
+    const run_compliance_step = b.step("compliance", "Run Ethereum compliance tests");
+    run_compliance_step.dependOn(&run_compliance_cmd.step);
+
+    // Shared library for FFI
+    const lib = b.addSharedLibrary(.{
+        .name = "zigevm",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/ffi.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    lib.linkLibC();
+
+    b.installArtifact(lib);
+
+    // Also create static library
+    const static_lib = b.addStaticLibrary(.{
+        .name = "zigevm",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/ffi.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    static_lib.linkLibC();
+
+    b.installArtifact(static_lib);
+
+    // Install the header file
+    b.installFile("include/zigevm.h", "include/zigevm.h");
+
+    // Add lib step
+    const lib_step = b.step("lib", "Build shared and static libraries");
+    lib_step.dependOn(&lib.step);
+    lib_step.dependOn(&static_lib.step);
+
     // Tests
     const tests = b.addTest(.{
         .root_module = b.createModule(.{

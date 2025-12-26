@@ -7,6 +7,8 @@ const Allocator = std.mem.Allocator;
 pub const BigInt = @import("bigint.zig").BigInt;
 pub const Memory = @import("memory.zig").Memory;
 pub const Stack = @import("stack.zig").Stack;
+pub const CallStack = @import("call_frame.zig").CallStack;
+pub const CallFrame = @import("call_frame.zig").CallFrame;
 
 pub const Opcode = enum(u8) {
     STOP = 0x00,
@@ -174,6 +176,39 @@ pub const Account = struct {
     storage: std.AutoHashMap(BigInt, BigInt),
 };
 
+/// Ethereum log entry
+pub const Log = struct {
+    address: [20]u8,
+    topics: std.ArrayList([32]u8),
+    data: []u8,
+
+    pub fn init(allocator: Allocator, address: [20]u8) Log {
+        return Log{
+            .address = address,
+            .topics = std.ArrayList([32]u8).init(allocator),
+            .data = &[_]u8{},
+        };
+    }
+
+    pub fn deinit(self: *Log, allocator: Allocator) void {
+        self.topics.deinit();
+        if (self.data.len > 0) {
+            allocator.free(self.data);
+        }
+    }
+
+    pub fn addTopic(self: *Log, topic: [32]u8) !void {
+        try self.topics.append(topic);
+    }
+
+    pub fn setData(self: *Log, allocator: Allocator, data: []const u8) !void {
+        if (self.data.len > 0) {
+            allocator.free(self.data);
+        }
+        self.data = try allocator.dupe(u8, data);
+    }
+};
+
 pub const EVM = struct {
     allocator: Allocator,
     stack: Stack,
@@ -199,6 +234,26 @@ pub const EVM = struct {
     block_gas_limit: u64,
     chain_id: u64,
     base_fee: BigInt,
+
+    // Call data (input to the current execution context)
+    calldata: []const u8,
+
+    // Return data from the last external call
+    return_data: []u8,
+
+    // Execution state flags
+    stop_execution: bool,
+    execution_reverted: bool,
+
+    // Block information
+    coinbase: [20]u8,
+    block_hashes: std.AutoHashMap(u64, [32]u8),
+
+    // Logs generated during execution
+    logs: std.ArrayList(Log),
+
+    // Call stack for nested calls
+    call_stack: CallStack,
 
     pub fn init(allocator: Allocator) !*EVM {
         var evm = try allocator.create(EVM);
@@ -227,6 +282,14 @@ pub const EVM = struct {
             .block_gas_limit = 30000000, // 30M gas limit
             .chain_id = 1, // Ethereum mainnet
             .base_fee = BigInt.init(10000000000), // 10 gwei default
+            .calldata = &[_]u8{},
+            .return_data = &[_]u8{},
+            .stop_execution = false,
+            .execution_reverted = false,
+            .coinbase = [_]u8{0} ** 20,
+            .block_hashes = std.AutoHashMap(u64, [32]u8).init(allocator),
+            .logs = std.ArrayList(Log).init(allocator),
+            .call_stack = CallStack.init(allocator),
         };
         try evm.loadOpcodes();
         return evm;
@@ -316,6 +379,13 @@ pub const EVM = struct {
         self.memory.deinit(self.allocator);
         self.opcodes.deinit();
         self.accounts.deinit();
+        self.block_hashes.deinit();
+        // Clean up logs
+        for (self.logs.items) |*log| {
+            log.deinit(self.allocator);
+        }
+        self.logs.deinit();
+        self.call_stack.deinit();
         self.allocator.destroy(self);
     }
 
@@ -665,10 +735,117 @@ pub const EVM = struct {
 
         const gas_impl = @import("opcodes/gas.zig").getImpl();
         try self.opcodes.put(@enumFromInt(gas_impl.code), gas_impl.impl);
+
+        // Storage opcodes
+        const sload_impl = @import("opcodes/sload.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(sload_impl.code), sload_impl.impl);
+
+        const sstore_impl = @import("opcodes/sstore.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(sstore_impl.code), sstore_impl.impl);
+
+        // Calldata opcodes
+        const calldataload_impl = @import("opcodes/calldataload.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(calldataload_impl.code), calldataload_impl.impl);
+
+        const calldatasize_impl = @import("opcodes/calldatasize.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(calldatasize_impl.code), calldatasize_impl.impl);
+
+        const calldatacopy_impl = @import("opcodes/calldatacopy.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(calldatacopy_impl.code), calldatacopy_impl.impl);
+
+        const callvalue_impl = @import("opcodes/callvalue.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(callvalue_impl.code), callvalue_impl.impl);
+
+        // Byte operations
+        const byte_impl = @import("opcodes/byte.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(byte_impl.code), byte_impl.impl);
+
+        const signextend_impl = @import("opcodes/signextend.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(signextend_impl.code), signextend_impl.impl);
+
+        // Return opcodes
+        const return_impl = @import("opcodes/return.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(return_impl.code), return_impl.impl);
+
+        const revert_impl = @import("opcodes/revert.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(revert_impl.code), revert_impl.impl);
+
+        const returndatasize_impl = @import("opcodes/returndatasize.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(returndatasize_impl.code), returndatasize_impl.impl);
+
+        const returndatacopy_impl = @import("opcodes/returndatacopy.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(returndatacopy_impl.code), returndatacopy_impl.impl);
+
+        // Code opcodes
+        const codesize_impl = @import("opcodes/codesize.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(codesize_impl.code), codesize_impl.impl);
+
+        const codecopy_impl = @import("opcodes/codecopy.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(codecopy_impl.code), codecopy_impl.impl);
+
+        const extcodesize_impl = @import("opcodes/extcodesize.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(extcodesize_impl.code), extcodesize_impl.impl);
+
+        const extcodecopy_impl = @import("opcodes/extcodecopy.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(extcodecopy_impl.code), extcodecopy_impl.impl);
+
+        const extcodehash_impl = @import("opcodes/extcodehash.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(extcodehash_impl.code), extcodehash_impl.impl);
+
+        // Block opcodes
+        const blockhash_impl = @import("opcodes/blockhash.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(blockhash_impl.code), blockhash_impl.impl);
+
+        const coinbase_impl = @import("opcodes/coinbase.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(coinbase_impl.code), coinbase_impl.impl);
+
+        // Hash opcodes
+        const sha3_impl = @import("opcodes/sha3.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(sha3_impl.code), sha3_impl.impl);
+
+        // Contract creation opcodes
+        const create_impl = @import("opcodes/create.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(create_impl.code), create_impl.impl);
+
+        const create2_impl = @import("opcodes/create2.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(create2_impl.code), create2_impl.impl);
+
+        // Call opcodes
+        const call_impl = @import("opcodes/call.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(call_impl.code), call_impl.impl);
+
+        const callcode_impl = @import("opcodes/callcode.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(callcode_impl.code), callcode_impl.impl);
+
+        const delegatecall_impl = @import("opcodes/delegatecall.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(delegatecall_impl.code), delegatecall_impl.impl);
+
+        const staticcall_impl = @import("opcodes/staticcall.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(staticcall_impl.code), staticcall_impl.impl);
+
+        // Logging opcodes
+        const log0_impl = @import("opcodes/log0.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(log0_impl.code), log0_impl.impl);
+
+        const log1_impl = @import("opcodes/log1.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(log1_impl.code), log1_impl.impl);
+
+        const log2_impl = @import("opcodes/log2.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(log2_impl.code), log2_impl.impl);
+
+        const log3_impl = @import("opcodes/log3.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(log3_impl.code), log3_impl.impl);
+
+        const log4_impl = @import("opcodes/log4.zig").getImpl();
+        try self.opcodes.put(@enumFromInt(log4_impl.code), log4_impl.impl);
     }
 
     pub fn execute(self: *EVM) !void {
-        while (self.pc < self.code.len) {
+        // Reset execution flags
+        self.stop_execution = false;
+        self.execution_reverted = false;
+
+        while (self.pc < self.code.len and !self.stop_execution) {
             const opcode = @as(Opcode, @enumFromInt(self.code[self.pc]));
 
             // Consume gas for the opcode

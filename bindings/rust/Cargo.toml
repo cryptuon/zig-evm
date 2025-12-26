@@ -1,0 +1,24 @@
+[package]
+name = "zigevm"
+version = "0.1.0"
+edition = "2021"
+authors = ["Zig EVM Contributors"]
+description = "High-performance EVM implementation for L2/Rollup execution"
+repository = "https://github.com/cryptuon/zig-evm"
+license = "MIT"
+keywords = ["ethereum", "evm", "blockchain", "l2", "rollup"]
+categories = ["cryptography", "emulators"]
+readme = "README.md"
+
+[lib]
+name = "zigevm"
+path = "src/lib.rs"
+
+[dependencies]
+thiserror = "1.0"
+
+[build-dependencies]
+cc = "1.0"
+
+[features]
+default = []

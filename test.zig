@@ -21,4 +21,7 @@ comptime {
     _ = @import("tests/test_env_ops.zig");
     _ = @import("tests/test_gas_tracking.zig");
     _ = @import("tests/test_parallel_execution.zig");
+    _ = @import("tests/test_storage.zig");
+    _ = @import("tests/eth_compliance.zig");
+    _ = @import("tests/eth_test_loader.zig");
 }

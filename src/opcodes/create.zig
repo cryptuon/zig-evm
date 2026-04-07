@@ -84,7 +84,7 @@ fn execute(evm: *EVM) !void {
     sender.balance = sender.balance.sub(value_big);
 
     // Create new account
-    var new_account = Account{
+    const new_account = Account{
         .balance = value_big,
         .nonce = 0, // Contracts start with nonce 0 (or 1 per EIP-161)
         .code = &[_]u8{}, // Will be set after execution

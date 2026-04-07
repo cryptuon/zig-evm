@@ -153,8 +153,30 @@ pub fn build(b: *std.Build) void {
     const run_compliance_step = b.step("compliance", "Run Ethereum compliance tests");
     run_compliance_step.dependOn(&run_compliance_cmd.step);
 
+    // Web demo server
+    const web_exe = b.addExecutable(.{
+        .name = "zig-evm-web",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/web_server.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+    b.installArtifact(web_exe);
+
+    const install_web = b.addInstallArtifact(web_exe, .{});
+    const build_web_step = b.step("build-web", "Build the web demo server");
+    build_web_step.dependOn(&install_web.step);
+
+    const run_web_cmd = b.addRunArtifact(web_exe);
+
+    const run_web_step = b.step("web", "Run the web demo server");
+    run_web_step.dependOn(&run_web_cmd.step);
+
     // Shared library for FFI
-    const lib = b.addSharedLibrary(.{
+    const lib = b.addLibrary(.{
+        .linkage = .dynamic,
         .name = "zigevm",
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/ffi.zig"),
@@ -167,7 +189,8 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(lib);
 
     // Also create static library
-    const static_lib = b.addStaticLibrary(.{
+    const static_lib = b.addLibrary(.{
+        .linkage = .static,
         .name = "zigevm",
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/ffi.zig"),

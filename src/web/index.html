@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zig EVM Playground</title>
+<style>
+:root {
+  --bg: #1e1e2e;
+  --surface: #313244;
+  --surface2: #45475a;
+  --overlay: #585b70;
+  --text: #cdd6f4;
+  --subtext: #a6adc8;
+  --green: #a6e3a1;
+  --blue: #89b4fa;
+  --yellow: #f9e2af;
+  --red: #f38ba8;
+  --peach: #fab387;
+  --mauve: #cba6f7;
+  --teal: #94e2d5;
+  --pink: #f5c2e7;
+  --radius: 8px;
+  --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--mono); background: var(--bg); color: var(--text); min-height: 100vh; }
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Header */
+.header { background: var(--surface); border-bottom: 1px solid var(--surface2); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+.header h1 { font-size: 18px; font-weight: 600; }
+.header h1 span { color: var(--peach); }
+.header-links { display: flex; gap: 16px; font-size: 13px; }
+.header-links a { color: var(--subtext); }
+
+/* Tabs */
+.tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--surface2); padding: 0 24px; gap: 0; }
+.tab { padding: 10px 20px; cursor: pointer; font-size: 13px; color: var(--subtext); border-bottom: 2px solid transparent; transition: all 0.15s; font-family: var(--mono); background: none; border-top: none; border-left: none; border-right: none; }
+.tab:hover { color: var(--text); background: var(--surface2); }
+.tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+/* Main Layout */
+.content { display: none; padding: 16px 24px; }
+.content.active { display: block; }
+
+/* Playground Layout */
+.playground { display: grid; grid-template-columns: 380px 1fr; gap: 16px; height: calc(100vh - 120px); }
+.panel { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--surface2); overflow: hidden; }
+.panel-header { padding: 10px 14px; background: var(--surface2); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--subtext); display: flex; justify-content: space-between; align-items: center; }
+.panel-body { padding: 14px; overflow-y: auto; }
+
+/* Left Panel */
+.left-panel { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+.left-panel .panel { flex-shrink: 0; }
+
+/* Bytecode Editor */
+.editor-area { width: 100%; min-height: 120px; background: var(--bg); border: 1px solid var(--surface2); border-radius: 4px; color: var(--green); font-family: var(--mono); font-size: 13px; padding: 10px; resize: vertical; outline: none; }
+.editor-area:focus { border-color: var(--blue); }
+.editor-area::placeholder { color: var(--overlay); }
+
+/* Example Selector */
+select { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--surface2); border-radius: 4px; padding: 8px 10px; font-family: var(--mono); font-size: 12px; cursor: pointer; outline: none; }
+select:focus { border-color: var(--blue); }
+option { background: var(--bg); }
+
+/* Config Row */
+.config-row { display: flex; gap: 8px; align-items: center; font-size: 12px; }
+.config-row label { color: var(--subtext); white-space: nowrap; }
+.config-row input[type="number"] { width: 100px; background: var(--bg); color: var(--text); border: 1px solid var(--surface2); border-radius: 4px; padding: 6px 8px; font-family: var(--mono); font-size: 12px; outline: none; }
+.config-row input:focus { border-color: var(--blue); }
+
+/* Buttons */
+.btn { padding: 8px 16px; border: none; border-radius: 4px; font-family: var(--mono); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.btn-primary { background: var(--blue); color: var(--bg); }
+.btn-primary:hover { opacity: 0.85; }
+.btn-secondary { background: var(--surface2); color: var(--text); }
+.btn-secondary:hover { background: var(--overlay); }
+.btn-success { background: var(--green); color: var(--bg); }
+.btn-success:hover { opacity: 0.85; }
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Opcode Palette */
+.opcode-palette { display: flex; flex-wrap: wrap; gap: 4px; }
+.opcode-btn { padding: 3px 6px; font-size: 10px; background: var(--bg); color: var(--subtext); border: 1px solid var(--surface2); border-radius: 3px; cursor: pointer; font-family: var(--mono); transition: all 0.1s; }
+.opcode-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--blue); }
+
+/* Right Panel */
+.right-panel { display: flex; flex-direction: column; overflow: hidden; }
+.sub-tabs { display: flex; border-bottom: 1px solid var(--surface2); background: var(--surface2); }
+.sub-tab { padding: 8px 14px; cursor: pointer; font-size: 11px; color: var(--subtext); border: none; background: none; font-family: var(--mono); transition: all 0.1s; }
+.sub-tab:hover { color: var(--text); }
+.sub-tab.active { color: var(--blue); background: var(--surface); }
+.sub-content { display: none; flex: 1; overflow-y: auto; padding: 12px; }
+.sub-content.active { display: block; }
+
+/* Execution Trace Table */
+.trace-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.trace-table th { padding: 6px 8px; text-align: left; color: var(--subtext); background: var(--surface2); position: sticky; top: 0; font-weight: 600; }
+.trace-table td { padding: 5px 8px; border-bottom: 1px solid var(--surface2); }
+.trace-table tr { cursor: pointer; transition: background 0.1s; }
+.trace-table tr:hover { background: var(--surface2); }
+.trace-table tr.active { background: rgba(137, 180, 250, 0.15); }
+.trace-table tr.error-row { background: rgba(243, 139, 168, 0.1); }
+.opcode-cell { color: var(--blue); font-weight: 600; }
+.operand-cell { color: var(--peach); }
+.gas-cell { color: var(--yellow); }
+.stack-cell { color: var(--green); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Step Controls */
+.step-controls { display: flex; gap: 8px; align-items: center; padding: 8px 12px; background: var(--surface2); border-bottom: 1px solid var(--surface); }
+.step-info { font-size: 11px; color: var(--subtext); margin-left: auto; }
+
+/* Stack Visualizer */
+.stack-viz { display: flex; flex-direction: column-reverse; gap: 4px; max-height: calc(100vh - 250px); }
+.stack-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--bg); border: 1px solid var(--surface2); border-radius: 4px; font-size: 11px; transition: all 0.2s; }
+.stack-item.new { border-color: var(--green); background: rgba(166, 227, 161, 0.1); }
+.stack-index { color: var(--subtext); min-width: 24px; }
+.stack-value { color: var(--green); word-break: break-all; flex: 1; }
+.stack-decimal { color: var(--subtext); font-size: 10px; }
+
+/* Gas Profile */
+.gas-bar-container { margin-bottom: 6px; }
+.gas-bar-label { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px; }
+.gas-bar-label .name { color: var(--blue); }
+.gas-bar-label .value { color: var(--yellow); }
+.gas-bar { height: 16px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.gas-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.gas-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.gas-stat { background: var(--bg); padding: 10px; border-radius: 4px; }
+.gas-stat-label { font-size: 10px; color: var(--subtext); text-transform: uppercase; }
+.gas-stat-value { font-size: 18px; font-weight: 600; margin-top: 2px; }
+
+/* Memory View */
+.memory-grid { font-size: 11px; line-height: 1.8; }
+.memory-row { display: flex; gap: 2px; }
+.memory-offset { color: var(--subtext); min-width: 60px; }
+.memory-byte { color: var(--green); min-width: 22px; text-align: center; }
+.memory-byte.zero { color: var(--overlay); }
+.memory-ascii { color: var(--peach); margin-left: 8px; }
+
+/* Empty State */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 200px; color: var(--overlay); font-size: 13px; gap: 8px; }
+
+/* Opcode Reference Tab */
+.ref-controls { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
+.ref-search { flex: 1; min-width: 200px; background: var(--surface); border: 1px solid var(--surface2); border-radius: 4px; padding: 8px 12px; color: var(--text); font-family: var(--mono); font-size: 12px; outline: none; }
+.ref-search:focus { border-color: var(--blue); }
+.filter-btn { padding: 4px 10px; font-size: 11px; background: var(--surface); color: var(--subtext); border: 1px solid var(--surface2); border-radius: 12px; cursor: pointer; font-family: var(--mono); }
+.filter-btn:hover, .filter-btn.active { background: var(--blue); color: var(--bg); border-color: var(--blue); }
+.ref-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ref-table th { padding: 8px 10px; text-align: left; color: var(--subtext); background: var(--surface); position: sticky; top: 0; font-weight: 600; border-bottom: 1px solid var(--surface2); }
+.ref-table td { padding: 6px 10px; border-bottom: 1px solid var(--surface2); }
+.ref-table tr { cursor: pointer; transition: background 0.1s; }
+.ref-table tr:hover { background: var(--surface); }
+.ref-hex { color: var(--peach); }
+.ref-name { color: var(--blue); font-weight: 600; }
+.ref-gas { color: var(--yellow); }
+.ref-cat { color: var(--mauve); font-size: 10px; padding: 2px 6px; background: rgba(203, 166, 247, 0.1); border-radius: 8px; }
+
+/* Parallel Tab */
+.parallel-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; height: calc(100vh - 120px); }
+.parallel-config { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+.parallel-results { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+.stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.stat-card { background: var(--bg); padding: 12px; border-radius: 6px; border: 1px solid var(--surface2); }
+.stat-card-label { font-size: 10px; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-card-value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+.wave-viz { display: flex; flex-direction: column; gap: 6px; }
+.wave-row { display: flex; align-items: center; gap: 8px; }
+.wave-label { font-size: 11px; color: var(--subtext); min-width: 60px; }
+.wave-bar { display: flex; gap: 4px; flex: 1; }
+.tx-block { padding: 4px 8px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--overlay); }
+
+@media (max-width: 900px) {
+  .playground { grid-template-columns: 1fr; height: auto; }
+  .parallel-layout { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span>Zig</span> EVM Playground</h1>
+  <div class="header-links">
+    <a href="https://github.com/cryptuon/zig-evm" target="_blank">GitHub</a>
+    <span style="color: var(--overlay)">|</span>
+    <span style="color: var(--subtext); font-size: 11px">96+ opcodes &middot; Parallel execution &middot; 256-bit math</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="playground">Bytecode Playground</button>
+  <button class="tab" data-tab="parallel">Parallel Execution</button>
+  <button class="tab" data-tab="reference">Opcode Reference</button>
+</div>
+
+<!-- Playground Tab -->
+<div class="content active" id="tab-playground">
+  <div class="playground">
+    <div class="left-panel">
+      <div class="panel">
+        <div class="panel-header">Bytecode Input</div>
+        <div class="panel-body">
+          <select id="example-select">
+            <option value="">-- Load Example --</option>
+          </select>
+          <textarea class="editor-area" id="bytecode-input" placeholder="Enter EVM bytecode hex (e.g. 6003600401)" spellcheck="false" rows="5" style="margin-top: 8px;"></textarea>
+          <div class="config-row" style="margin-top: 8px;">
+            <label>Gas Limit:</label>
+            <input type="number" id="gas-limit" value="100000" min="1" max="30000000">
+            <label style="margin-left: 8px;">Calldata:</label>
+            <input type="number" id="calldata-input" value="" placeholder="hex" style="width: 80px; background: var(--bg); color: var(--text); border: 1px solid var(--surface2); border-radius: 4px; padding: 6px 8px; font-family: var(--mono); font-size: 12px;">
+          </div>
+          <div class="btn-group" style="margin-top: 10px;">
+            <button class="btn btn-primary" id="btn-execute">Execute</button>
+            <button class="btn btn-success" id="btn-step">Step Through</button>
+            <button class="btn btn-secondary" id="btn-clear">Clear</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Quick Insert</div>
+        <div class="panel-body">
+          <div class="opcode-palette" id="opcode-palette"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-panel panel">
+      <div class="sub-tabs">
+        <button class="sub-tab active" data-subtab="trace">Execution Trace</button>
+        <button class="sub-tab" data-subtab="stack">Stack</button>
+        <button class="sub-tab" data-subtab="gas">Gas Profile</button>
+        <button class="sub-tab" data-subtab="memory">Memory</button>
+        <button class="sub-tab" data-subtab="output">Output</button>
+      </div>
+      <div id="step-controls-container"></div>
+      <div class="sub-content active" id="subtab-trace">
+        <div class="empty-state" id="trace-empty">Execute bytecode to see the trace</div>
+        <table class="trace-table" id="trace-table" style="display:none;">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>PC</th>
+              <th>Opcode</th>
+              <th>Operand</th>
+              <th>Gas Cost</th>
+              <th>Gas Left</th>
+              <th>Stack (top)</th>
+            </tr>
+          </thead>
+          <tbody id="trace-body"></tbody>
+        </table>
+      </div>
+      <div class="sub-content" id="subtab-stack">
+        <div class="empty-state" id="stack-empty">Execute bytecode to see the stack</div>
+        <div class="stack-viz" id="stack-viz"></div>
+      </div>
+      <div class="sub-content" id="subtab-gas">
+        <div class="empty-state" id="gas-empty">Execute bytecode to see gas profile</div>
+        <div id="gas-profile"></div>
+      </div>
+      <div class="sub-content" id="subtab-memory">
+        <div class="empty-state" id="memory-empty">Execute bytecode to see memory</div>
+        <div class="memory-grid" id="memory-view"></div>
+      </div>
+      <div class="sub-content" id="subtab-output">
+        <div class="empty-state" id="output-empty">Execute bytecode to see output</div>
+        <div id="output-view"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Parallel Execution Tab -->
+<div class="content" id="tab-parallel">
+  <div class="parallel-layout">
+    <div class="parallel-config">
+      <div class="panel">
+        <div class="panel-header">Scenario</div>
+        <div class="panel-body">
+          <select id="parallel-scenario">
+            <option value="independent">Independent Transfers (max parallelism)</option>
+            <option value="contention">Storage Contention (serialized)</option>
+            <option value="mixed">Mixed Workload (partial parallelism)</option>
+          </select>
+          <p style="font-size: 11px; color: var(--subtext); margin-top: 8px;" id="scenario-desc">
+            8 transactions between different addresses - all can run in parallel.
+          </p>
+          <div class="btn-group" style="margin-top: 12px;">
+            <button class="btn btn-primary" id="btn-parallel-run">Run Batch</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Transactions</div>
+        <div class="panel-body" id="tx-list" style="font-size: 11px; max-height: 400px; overflow-y: auto;">
+          <div class="empty-state" style="height: 100px;">Select a scenario and run</div>
+        </div>
+      </div>
+    </div>
+    <div class="parallel-results">
+      <div class="panel">
+        <div class="panel-header">Execution Stats</div>
+        <div class="panel-body">
+          <div class="stat-grid" id="parallel-stats">
+            <div class="stat-card">
+              <div class="stat-card-label">Transactions</div>
+              <div class="stat-card-value" style="color: var(--text);">-</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Parallel Waves</div>
+              <div class="stat-card-value" style="color: var(--blue);">-</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Max Parallelism</div>
+              <div class="stat-card-value" style="color: var(--green);">-</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Total Gas</div>
+              <div class="stat-card-value" style="color: var(--yellow);">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="flex: 1;">
+        <div class="panel-header">Execution Waves</div>
+        <div class="panel-body">
+          <div class="empty-state" id="waves-empty">Run a batch to see wave visualization</div>
+          <div class="wave-viz" id="wave-viz"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Opcode Reference Tab -->
+<div class="content" id="tab-reference">
+  <div class="ref-controls">
+    <input type="text" class="ref-search" id="ref-search" placeholder="Search opcodes...">
+    <button class="filter-btn active" data-cat="all">All</button>
+    <button class="filter-btn" data-cat="arithmetic">Arithmetic</button>
+    <button class="filter-btn" data-cat="comparison">Comparison</button>
+    <button class="filter-btn" data-cat="bitwise">Bitwise</button>
+    <button class="filter-btn" data-cat="stack">Stack</button>
+    <button class="filter-btn" data-cat="memory">Memory</button>
+    <button class="filter-btn" data-cat="storage">Storage</button>
+    <button class="filter-btn" data-cat="control">Control</button>
+    <button class="filter-btn" data-cat="environment">Environment</button>
+    <button class="filter-btn" data-cat="block">Block</button>
+    <button class="filter-btn" data-cat="system">System</button>
+    <button class="filter-btn" data-cat="logging">Logging</button>
+  </div>
+  <table class="ref-table">
+    <thead>
+      <tr>
+        <th>Hex</th>
+        <th>Opcode</th>
+        <th>Gas</th>
+        <th>In</th>
+        <th>Out</th>
+        <th>Description</th>
+        <th>Category</th>
+      </tr>
+    </thead>
+    <tbody id="ref-body"></tbody>
+  </table>
+</div>
+
+<script>
+// ============================================================
+// State
+// ============================================================
+let traceData = null;
+let currentStep = -1;
+let stepping = false;
+let stepTimer = null;
+let opcodeData = [];
+let exampleData = [];
+
+// ============================================================
+// Tab Navigation
+// ============================================================
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+document.querySelectorAll('.sub-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.sub-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('subtab-' + tab.dataset.subtab).classList.add('active');
+  });
+});
+
+// ============================================================
+// API Calls
+// ============================================================
+async function apiGet(path) {
+  const res = await fetch(path);
+  return res.json();
+}
+async function apiPost(path, body) {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+// ============================================================
+// Hex Helpers
+// ============================================================
+function hexToDecimal(hex) {
+  if (!hex || hex === '0x' || hex === '0x0' || hex === '0x00') return '0';
+  try {
+    const val = BigInt(hex);
+    if (val < 1000000n) return val.toString();
+    return val.toString().slice(0, 8) + '...';
+  } catch { return '?'; }
+}
+
+function shortHex(hex, maxLen) {
+  if (!hex) return '';
+  maxLen = maxLen || 18;
+  if (hex.length <= maxLen) return hex;
+  return hex.slice(0, maxLen - 3) + '...';
+}
+
+// ============================================================
+// Load Examples & Opcodes
+// ============================================================
+async function loadExamples() {
+  try {
+    exampleData = await apiGet('/api/examples');
+    const sel = document.getElementById('example-select');
+    exampleData.forEach((ex, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = ex.name + ' - ' + ex.description;
+      sel.appendChild(opt);
+    });
+  } catch(e) { console.error('Failed to load examples', e); }
+}
+
+async function loadOpcodes() {
+  try {
+    opcodeData = await apiGet('/api/opcodes');
+    renderOpcodeReference();
+    renderOpcodePalette();
+  } catch(e) { console.error('Failed to load opcodes', e); }
+}
+
+document.getElementById('example-select').addEventListener('change', (e) => {
+  const idx = parseInt(e.target.value);
+  if (!isNaN(idx) && exampleData[idx]) {
+    document.getElementById('bytecode-input').value = exampleData[idx].bytecode;
+    document.getElementById('gas-limit').value = exampleData[idx].gas_limit || 100000;
+  }
+});
+
+// ============================================================
+// Opcode Palette
+// ============================================================
+function renderOpcodePalette() {
+  const palette = document.getElementById('opcode-palette');
+  const common = [
+    { name: 'STOP', hex: '00' },
+    { name: 'ADD', hex: '01' },
+    { name: 'MUL', hex: '02' },
+    { name: 'SUB', hex: '03' },
+    { name: 'DIV', hex: '04' },
+    { name: 'MOD', hex: '06' },
+    { name: 'EQ', hex: '14' },
+    { name: 'LT', hex: '10' },
+    { name: 'GT', hex: '11' },
+    { name: 'AND', hex: '16' },
+    { name: 'OR', hex: '17' },
+    { name: 'XOR', hex: '18' },
+    { name: 'NOT', hex: '19' },
+    { name: 'SHL', hex: '1b' },
+    { name: 'SHR', hex: '1c' },
+    { name: 'POP', hex: '50' },
+    { name: 'MLOAD', hex: '51' },
+    { name: 'MSTORE', hex: '52' },
+    { name: 'SLOAD', hex: '54' },
+    { name: 'SSTORE', hex: '55' },
+    { name: 'JUMP', hex: '56' },
+    { name: 'JUMPI', hex: '57' },
+    { name: 'JUMPDEST', hex: '5b' },
+    { name: 'PUSH1', hex: '60' },
+    { name: 'PUSH2', hex: '61' },
+    { name: 'PUSH4', hex: '63' },
+    { name: 'PUSH32', hex: '7f' },
+    { name: 'DUP1', hex: '80' },
+    { name: 'DUP2', hex: '81' },
+    { name: 'SWAP1', hex: '90' },
+    { name: 'SWAP2', hex: '91' },
+    { name: 'RETURN', hex: 'f3' },
+    { name: 'REVERT', hex: 'fd' },
+  ];
+  palette.innerHTML = '';
+  common.forEach(op => {
+    const btn = document.createElement('button');
+    btn.className = 'opcode-btn';
+    btn.textContent = op.name;
+    btn.title = '0x' + op.hex;
+    btn.addEventListener('click', () => {
+      const input = document.getElementById('bytecode-input');
+      input.value += op.hex;
+      input.focus();
+    });
+    palette.appendChild(btn);
+  });
+}
+
+// ============================================================
+// Execute
+// ============================================================
+document.getElementById('btn-execute').addEventListener('click', async () => {
+  const bytecode = document.getElementById('bytecode-input').value.trim().replace(/\s/g, '');
+  const gasLimit = parseInt(document.getElementById('gas-limit').value) || 100000;
+  if (!bytecode) return;
+
+  document.getElementById('btn-execute').textContent = 'Running...';
+  document.getElementById('btn-execute').disabled = true;
+
+  try {
+    traceData = await apiPost('/api/execute-trace', {
+      bytecode: bytecode,
+      gas_limit: gasLimit,
+    });
+    currentStep = -1;
+    stepping = false;
+    renderTrace();
+    renderGasProfile();
+    renderOutput();
+    // Show all steps by default
+    if (traceData.steps && traceData.steps.length > 0) {
+      selectStep(traceData.steps.length - 1);
+    }
+  } catch(e) {
+    console.error(e);
+  } finally {
+    document.getElementById('btn-execute').textContent = 'Execute';
+    document.getElementById('btn-execute').disabled = false;
+  }
+});
+
+document.getElementById('btn-step').addEventListener('click', () => {
+  const bytecode = document.getElementById('bytecode-input').value.trim().replace(/\s/g, '');
+  const gasLimit = parseInt(document.getElementById('gas-limit').value) || 100000;
+  if (!bytecode) return;
+
+  if (!traceData || !stepping) {
+    // Start new step-through
+    stepping = true;
+    currentStep = -1;
+    apiPost('/api/execute-trace', { bytecode, gas_limit: gasLimit }).then(data => {
+      traceData = data;
+      renderTrace();
+      renderStepControls();
+      advanceStep();
+    });
+  } else {
+    advanceStep();
+  }
+});
+
+document.getElementById('btn-clear').addEventListener('click', () => {
+  traceData = null;
+  currentStep = -1;
+  stepping = false;
+  if (stepTimer) { clearInterval(stepTimer); stepTimer = null; }
+  document.getElementById('trace-table').style.display = 'none';
+  document.getElementById('trace-empty').style.display = 'flex';
+  document.getElementById('trace-body').innerHTML = '';
+  document.getElementById('stack-viz').innerHTML = '';
+  document.getElementById('stack-empty').style.display = 'flex';
+  document.getElementById('gas-profile').innerHTML = '';
+  document.getElementById('gas-empty').style.display = 'flex';
+  document.getElementById('memory-view').innerHTML = '';
+  document.getElementById('memory-empty').style.display = 'flex';
+  document.getElementById('output-view').innerHTML = '';
+  document.getElementById('output-empty').style.display = 'flex';
+  document.getElementById('step-controls-container').innerHTML = '';
+});
+
+// ============================================================
+// Step Controls
+// ============================================================
+function renderStepControls() {
+  if (!traceData || !traceData.steps) return;
+  const container = document.getElementById('step-controls-container');
+  container.innerHTML = `
+    <div class="step-controls">
+      <button class="btn btn-secondary" id="btn-step-prev" style="padding:4px 10px;font-size:11px;">&laquo; Prev</button>
+      <button class="btn btn-secondary" id="btn-step-next" style="padding:4px 10px;font-size:11px;">Next &raquo;</button>
+      <button class="btn btn-secondary" id="btn-step-play" style="padding:4px 10px;font-size:11px;">Play</button>
+      <button class="btn btn-secondary" id="btn-step-end" style="padding:4px 10px;font-size:11px;">End</button>
+      <span class="step-info" id="step-info">Step - / ${traceData.steps.length}</span>
+    </div>
+  `;
+  document.getElementById('btn-step-prev').addEventListener('click', () => {
+    if (currentStep > 0) selectStep(currentStep - 1);
+  });
+  document.getElementById('btn-step-next').addEventListener('click', advanceStep);
+  document.getElementById('btn-step-play').addEventListener('click', () => {
+    if (stepTimer) {
+      clearInterval(stepTimer);
+      stepTimer = null;
+      document.getElementById('btn-step-play').textContent = 'Play';
+    } else {
+      document.getElementById('btn-step-play').textContent = 'Pause';
+      stepTimer = setInterval(() => {
+        if (currentStep >= traceData.steps.length - 1) {
+          clearInterval(stepTimer);
+          stepTimer = null;
+          document.getElementById('btn-step-play').textContent = 'Play';
+          return;
+        }
+        advanceStep();
+      }, 300);
+    }
+  });
+  document.getElementById('btn-step-end').addEventListener('click', () => {
+    if (stepTimer) { clearInterval(stepTimer); stepTimer = null; }
+    selectStep(traceData.steps.length - 1);
+  });
+}
+
+function advanceStep() {
+  if (!traceData || !traceData.steps) return;
+  if (currentStep < traceData.steps.length - 1) {
+    selectStep(currentStep + 1);
+  }
+}
+
+function selectStep(idx) {
+  currentStep = idx;
+  const step = traceData.steps[idx];
+  if (!step) return;
+
+  // Update step info
+  const info = document.getElementById('step-info');
+  if (info) info.textContent = `Step ${idx + 1} / ${traceData.steps.length}`;
+
+  // Highlight trace row
+  document.querySelectorAll('#trace-body tr').forEach((tr, i) => {
+    tr.classList.toggle('active', i === idx);
+  });
+
+  // Scroll to row
+  const row = document.querySelectorAll('#trace-body tr')[idx];
+  if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+  // Update stack
+  renderStackAtStep(idx);
+  // Update memory
+  renderMemoryAtStep(idx);
+}
+
+// ============================================================
+// Render Trace Table
+// ============================================================
+function renderTrace() {
+  if (!traceData || !traceData.steps) return;
+  document.getElementById('trace-empty').style.display = 'none';
+  document.getElementById('trace-table').style.display = 'table';
+
+  const tbody = document.getElementById('trace-body');
+  tbody.innerHTML = '';
+
+  traceData.steps.forEach((step, i) => {
+    const tr = document.createElement('tr');
+    if (step.error_msg) tr.classList.add('error-row');
+
+    const stackTop = step.stack.length > 0
+      ? step.stack.slice(-3).reverse().map(s => shortHex(s, 14)).join(', ')
+      : '(empty)';
+
+    tr.innerHTML = `
+      <td>${step.step}</td>
+      <td>${step.pc}</td>
+      <td class="opcode-cell">${step.opcode_name}</td>
+      <td class="operand-cell">${step.operand || ''}</td>
+      <td class="gas-cell">${step.gas_cost}</td>
+      <td>${step.gas_remaining.toLocaleString()}</td>
+      <td class="stack-cell" title="${step.stack.slice(-3).reverse().join('\n')}">${stackTop}</td>
+    `;
+    tr.addEventListener('click', () => selectStep(i));
+    tbody.appendChild(tr);
+  });
+
+  if (stepping) renderStepControls();
+}
+
+// ============================================================
+// Stack Visualizer
+// ============================================================
+function renderStackAtStep(idx) {
+  document.getElementById('stack-empty').style.display = 'none';
+  const container = document.getElementById('stack-viz');
+  const step = traceData.steps[idx];
+  if (!step) return;
+
+  const prevStack = idx > 0 ? traceData.steps[idx - 1].stack : [];
+
+  container.innerHTML = '';
+  if (step.stack.length === 0) {
+    container.innerHTML = '<div style="color: var(--overlay); font-size: 12px; text-align: center; padding: 20px;">Stack is empty</div>';
+    return;
+  }
+
+  // Show stack top to bottom (reversed display)
+  for (let i = step.stack.length - 1; i >= 0; i--) {
+    const val = step.stack[i];
+    const isNew = i >= prevStack.length || prevStack[i] !== val;
+    const div = document.createElement('div');
+    div.className = 'stack-item' + (isNew ? ' new' : '');
+    const stackPos = step.stack.length - 1 - i;
+    div.innerHTML = `
+      <span class="stack-index">${stackPos}</span>
+      <span class="stack-value">${shortHex(val, 30)}</span>
+      <span class="stack-decimal">${hexToDecimal(val)}</span>
+    `;
+    container.appendChild(div);
+  }
+}
+
+// ============================================================
+// Memory View
+// ============================================================
+function renderMemoryAtStep(idx) {
+  const step = traceData.steps[idx];
+  if (!step || step.memory_size === 0) {
+    document.getElementById('memory-empty').style.display = 'flex';
+    document.getElementById('memory-view').innerHTML = '';
+    return;
+  }
+  document.getElementById('memory-empty').style.display = 'none';
+  const container = document.getElementById('memory-view');
+  container.innerHTML = `<div style="color: var(--subtext); font-size: 11px; margin-bottom: 8px;">Memory Size: ${step.memory_size} bytes</div>`;
+  // Note: we only show size since we don't have byte-level memory in trace
+  // A future enhancement could include memory snapshots
+}
+
+// ============================================================
+// Gas Profile
+// ============================================================
+function renderGasProfile() {
+  if (!traceData || !traceData.steps) return;
+  document.getElementById('gas-empty').style.display = 'none';
+  const container = document.getElementById('gas-profile');
+
+  // Summary
+  const used = traceData.total_gas_used;
+  const limit = traceData.gas_limit;
+  const pct = ((used / limit) * 100).toFixed(1);
+
+  let html = `<div class="gas-summary">
+    <div class="gas-stat">
+      <div class="gas-stat-label">Gas Used</div>
+      <div class="gas-stat-value" style="color: var(--yellow);">${used.toLocaleString()}</div>
+    </div>
+    <div class="gas-stat">
+      <div class="gas-stat-label">Gas Limit</div>
+      <div class="gas-stat-value" style="color: var(--text);">${limit.toLocaleString()}</div>
+    </div>
+    <div class="gas-stat">
+      <div class="gas-stat-label">Efficiency</div>
+      <div class="gas-stat-value" style="color: var(--green);">${pct}%</div>
+    </div>
+    <div class="gas-stat">
+      <div class="gas-stat-label">Steps</div>
+      <div class="gas-stat-value" style="color: var(--blue);">${traceData.steps.length}</div>
+    </div>
+  </div>`;
+
+  // Per-opcode breakdown
+  const gasByOp = {};
+  traceData.steps.forEach(s => {
+    if (!gasByOp[s.opcode_name]) gasByOp[s.opcode_name] = 0;
+    gasByOp[s.opcode_name] += s.gas_cost;
+  });
+  const sorted = Object.entries(gasByOp).sort((a, b) => b[1] - a[1]);
+  const maxGas = sorted.length > 0 ? sorted[0][1] : 1;
+
+  const colors = ['var(--blue)', 'var(--green)', 'var(--yellow)', 'var(--peach)', 'var(--mauve)', 'var(--teal)', 'var(--pink)', 'var(--red)'];
+  html += '<div style="margin-top: 4px;">';
+  sorted.forEach(([name, gas], i) => {
+    const w = (gas / maxGas * 100).toFixed(1);
+    const color = colors[i % colors.length];
+    html += `<div class="gas-bar-container">
+      <div class="gas-bar-label"><span class="name">${name}</span><span class="value">${gas}</span></div>
+      <div class="gas-bar"><div class="gas-bar-fill" style="width:${w}%;background:${color};"></div></div>
+    </div>`;
+  });
+  html += '</div>';
+
+  container.innerHTML = html;
+}
+
+// ============================================================
+// Output View
+// ============================================================
+function renderOutput() {
+  if (!traceData) return;
+  document.getElementById('output-empty').style.display = 'none';
+  const container = document.getElementById('output-view');
+
+  let html = `<div style="font-size: 12px;">`;
+  html += `<div style="margin-bottom: 12px; padding: 10px; background: var(--bg); border-radius: 4px; border-left: 3px solid ${traceData.success ? 'var(--green)' : 'var(--red)'};">`;
+  html += `<strong style="color: ${traceData.success ? 'var(--green)' : 'var(--red)'};">${traceData.success ? 'SUCCESS' : 'FAILED'}</strong>`;
+  if (traceData.error_msg) html += `<span style="color: var(--red); margin-left: 8px;">${traceData.error_msg}</span>`;
+  html += `</div>`;
+
+  // Return data
+  html += `<div style="margin-bottom: 12px;"><strong style="color: var(--subtext);">Return Data:</strong><br>
+    <code style="color: var(--green);">${traceData.return_data || '0x'}</code></div>`;
+
+  // Final stack
+  html += `<div style="margin-bottom: 12px;"><strong style="color: var(--subtext);">Final Stack:</strong><br>`;
+  if (traceData.final_stack && traceData.final_stack.length > 0) {
+    traceData.final_stack.slice().reverse().forEach((v, i) => {
+      html += `<div style="padding: 2px 0;"><span style="color: var(--overlay);">[${i}]</span> <code style="color: var(--green);">${v}</code> <span style="color: var(--subtext); font-size: 10px;">(${hexToDecimal(v)})</span></div>`;
+    });
+  } else {
+    html += `<span style="color: var(--overlay);">(empty)</span>`;
+  }
+  html += `</div>`;
+
+  // Storage
+  if (traceData.storage && traceData.storage.length > 0) {
+    html += `<div style="margin-bottom: 12px;"><strong style="color: var(--subtext);">Storage:</strong><br>`;
+    traceData.storage.forEach(s => {
+      html += `<div style="padding: 2px 0;"><code style="color: var(--peach);">${s.key}</code> => <code style="color: var(--green);">${s.value}</code></div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Logs
+  if (traceData.logs && traceData.logs.length > 0) {
+    html += `<div style="margin-bottom: 12px;"><strong style="color: var(--subtext);">Logs (${traceData.logs.length}):</strong><br>`;
+    traceData.logs.forEach((log, i) => {
+      html += `<div style="padding: 4px 0; border-bottom: 1px solid var(--surface2);">
+        <div>Log #${i}: address=${shortHex(log.address)}</div>
+        <div>Topics: ${log.topics.map(t => shortHex(t)).join(', ') || 'none'}</div>
+        <div>Data: ${shortHex(log.data, 40)}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+// ============================================================
+// Opcode Reference
+// ============================================================
+function renderOpcodeReference(filter, search) {
+  filter = filter || 'all';
+  search = (search || '').toLowerCase();
+  const tbody = document.getElementById('ref-body');
+  tbody.innerHTML = '';
+
+  opcodeData.forEach(op => {
+    if (filter !== 'all' && op.category !== filter) return;
+    if (search && !op.name.toLowerCase().includes(search) && !op.description.toLowerCase().includes(search)) return;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="ref-hex">0x${op.code.toString(16).padStart(2, '0')}</td>
+      <td class="ref-name">${op.name}</td>
+      <td class="ref-gas">${op.gas}</td>
+      <td>${op.stack_in}</td>
+      <td>${op.stack_out}</td>
+      <td>${op.description}</td>
+      <td><span class="ref-cat">${op.category}</span></td>
+    `;
+    tr.addEventListener('click', () => {
+      // Switch to playground and insert
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+      document.querySelector('[data-tab="playground"]').classList.add('active');
+      document.getElementById('tab-playground').classList.add('active');
+      const input = document.getElementById('bytecode-input');
+      input.value += op.code.toString(16).padStart(2, '0');
+      input.focus();
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderOpcodeReference(btn.dataset.cat, document.getElementById('ref-search').value);
+  });
+});
+document.getElementById('ref-search').addEventListener('input', (e) => {
+  const activeFilter = document.querySelector('.filter-btn.active');
+  renderOpcodeReference(activeFilter ? activeFilter.dataset.cat : 'all', e.target.value);
+});
+
+// ============================================================
+// Parallel Execution
+// ============================================================
+const scenarios = {
+  independent: {
+    desc: '8 transactions between different addresses - all can run in parallel.',
+    txs: Array.from({length: 8}, (_, i) => ({
+      from: '0x' + (i + 1).toString(16).padStart(40, '0'),
+      to: '0x' + (i + 11).toString(16).padStart(40, '0'),
+      value: ((i + 1) * 100).toString(),
+      data: '',
+    })),
+  },
+  contention: {
+    desc: '6 transactions all touching the same address - must serialize.',
+    txs: Array.from({length: 6}, (_, i) => ({
+      from: '0x' + (i + 1).toString(16).padStart(40, '0'),
+      to: '0x' + 'aa'.repeat(20),
+      value: '50',
+      data: '',
+    })),
+  },
+  mixed: {
+    desc: '10 transactions - some independent, some sharing addresses.',
+    txs: [
+      { from: '0x' + '01'.repeat(20), to: '0x' + '0a'.repeat(20), value: '100', data: '' },
+      { from: '0x' + '02'.repeat(20), to: '0x' + '0b'.repeat(20), value: '200', data: '' },
+      { from: '0x' + '03'.repeat(20), to: '0x' + '0a'.repeat(20), value: '150', data: '' },
+      { from: '0x' + '04'.repeat(20), to: '0x' + '0c'.repeat(20), value: '300', data: '' },
+      { from: '0x' + '05'.repeat(20), to: '0x' + '0b'.repeat(20), value: '50', data: '' },
+      { from: '0x' + '06'.repeat(20), to: '0x' + '0d'.repeat(20), value: '400', data: '' },
+      { from: '0x' + '01'.repeat(20), to: '0x' + '0e'.repeat(20), value: '75', data: '' },
+      { from: '0x' + '07'.repeat(20), to: '0x' + '0f'.repeat(20), value: '250', data: '' },
+      { from: '0x' + '08'.repeat(20), to: '0x' + '0c'.repeat(20), value: '125', data: '' },
+      { from: '0x' + '09'.repeat(20), to: '0x' + '10'.repeat(20), value: '175', data: '' },
+    ],
+  },
+};
+
+document.getElementById('parallel-scenario').addEventListener('change', (e) => {
+  const s = scenarios[e.target.value];
+  if (s) document.getElementById('scenario-desc').textContent = s.desc;
+});
+
+document.getElementById('btn-parallel-run').addEventListener('click', () => {
+  const scenarioKey = document.getElementById('parallel-scenario').value;
+  const scenario = scenarios[scenarioKey];
+  if (!scenario) return;
+
+  // Simulate dependency analysis and wave building client-side
+  // (since our batch executor needs account state that's complex to set up via API)
+  simulateParallelExecution(scenario.txs);
+});
+
+function simulateParallelExecution(txs) {
+  // Client-side dependency analysis (mirrors the Zig implementation)
+  const waves = buildWaves(txs);
+
+  // Render transaction list
+  const txList = document.getElementById('tx-list');
+  txList.innerHTML = '';
+  txs.forEach((tx, i) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'padding: 4px 0; border-bottom: 1px solid var(--surface2);';
+    div.innerHTML = `<span style="color: var(--blue);">Tx${i}</span>: <span style="color: var(--subtext);">${shortHex(tx.from, 10)}</span> -> <span style="color: var(--green);">${shortHex(tx.to, 10)}</span> <span style="color: var(--yellow);">${tx.value} wei</span>`;
+    txList.appendChild(div);
+  });
+
+  // Stats
+  const maxP = Math.max(...waves.map(w => w.length));
+  const statsHtml = `
+    <div class="stat-card"><div class="stat-card-label">Transactions</div><div class="stat-card-value" style="color: var(--text);">${txs.length}</div></div>
+    <div class="stat-card"><div class="stat-card-label">Parallel Waves</div><div class="stat-card-value" style="color: var(--blue);">${waves.length}</div></div>
+    <div class="stat-card"><div class="stat-card-label">Max Parallelism</div><div class="stat-card-value" style="color: var(--green);">${maxP}</div></div>
+    <div class="stat-card"><div class="stat-card-label">Speedup</div><div class="stat-card-value" style="color: var(--peach);">${(txs.length / waves.length).toFixed(1)}x</div></div>
+  `;
+  document.getElementById('parallel-stats').innerHTML = statsHtml;
+
+  // Wave visualization
+  document.getElementById('waves-empty').style.display = 'none';
+  const waveViz = document.getElementById('wave-viz');
+  const waveColors = ['var(--blue)', 'var(--green)', 'var(--yellow)', 'var(--peach)', 'var(--mauve)', 'var(--teal)', 'var(--pink)', 'var(--red)'];
+
+  let html = '';
+  waves.forEach((wave, wi) => {
+    html += `<div class="wave-row">
+      <div class="wave-label">Wave ${wi}</div>
+      <div class="wave-bar">`;
+    wave.forEach(txIdx => {
+      const color = waveColors[wi % waveColors.length];
+      html += `<div class="tx-block" style="background: ${color}; color: var(--bg);">Tx${txIdx}</div>`;
+    });
+    html += `</div></div>`;
+  });
+
+  // Add dependency info
+  html += `<div style="margin-top: 16px; font-size: 11px; color: var(--subtext);">
+    <strong>Dependency Analysis:</strong>
+    <div style="margin-top: 4px;">`;
+
+  const deps = findDependencies(txs);
+  if (deps.length === 0) {
+    html += '<span style="color: var(--green);">No dependencies found - all transactions are independent!</span>';
+  } else {
+    deps.forEach(d => {
+      html += `<div style="padding: 2px 0;">Tx${d.a} <-> Tx${d.b}: <span style="color: var(--yellow);">${d.reason}</span></div>`;
+    });
+  }
+  html += '</div></div>';
+
+  // Sequential vs Parallel comparison bar
+  const seqTime = txs.length;
+  const parTime = waves.length;
+  html += `<div style="margin-top: 16px;">
+    <div style="font-size: 11px; color: var(--subtext); margin-bottom: 4px;">Sequential vs Parallel (relative time)</div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+      <span style="min-width: 70px; font-size: 11px; color: var(--red);">Sequential</span>
+      <div style="flex: 1; background: var(--bg); border-radius: 3px; height: 20px; overflow: hidden;">
+        <div style="width: 100%; height: 100%; background: var(--red); opacity: 0.6; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text);">${seqTime} steps</div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="min-width: 70px; font-size: 11px; color: var(--green);">Parallel</span>
+      <div style="flex: 1; background: var(--bg); border-radius: 3px; height: 20px; overflow: hidden;">
+        <div style="width: ${(parTime / seqTime * 100).toFixed(0)}%; height: 100%; background: var(--green); opacity: 0.6; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--bg);">${parTime} waves</div>
+      </div>
+    </div>
+  </div>`;
+
+  waveViz.innerHTML = html;
+}
+
+function buildWaves(txs) {
+  const waves = [];
+  const remaining = txs.map((_, i) => i);
+  const usedNonces = {};
+
+  while (remaining.length > 0) {
+    const wave = [];
+    const usedAddrs = new Set();
+    const toRemove = [];
+
+    for (let i = 0; i < remaining.length; i++) {
+      const txIdx = remaining[i];
+      const tx = txs[txIdx];
+      if (usedAddrs.has(tx.from) || usedAddrs.has(tx.to)) continue;
+      // Same sender must be sequential
+      const senderKey = tx.from;
+      const expectedNonce = usedNonces[senderKey] || 0;
+      // For simplicity, allow if sender not yet in wave
+      wave.push(txIdx);
+      usedAddrs.add(tx.from);
+      usedAddrs.add(tx.to);
+      usedNonces[senderKey] = expectedNonce + 1;
+      toRemove.push(i);
+    }
+
+    if (wave.length === 0 && remaining.length > 0) {
+      // Force remaining into one wave
+      waves.push([...remaining]);
+      break;
+    }
+
+    // Remove used indices (reverse order)
+    for (let i = toRemove.length - 1; i >= 0; i--) {
+      remaining.splice(toRemove[i], 1);
+    }
+    waves.push(wave);
+  }
+  return waves;
+}
+
+function findDependencies(txs) {
+  const deps = [];
+  for (let i = 0; i < txs.length; i++) {
+    for (let j = i + 1; j < txs.length; j++) {
+      const a = txs[i], b = txs[j];
+      if (a.from === b.from) deps.push({ a: i, b: j, reason: 'Same sender (nonce conflict)' });
+      else if (a.to === b.to) deps.push({ a: i, b: j, reason: 'Same recipient (write conflict)' });
+      else if (a.from === b.to || a.to === b.from) deps.push({ a: i, b: j, reason: 'Address overlap (read/write conflict)' });
+    }
+  }
+  return deps;
+}
+
+// ============================================================
+// Init
+// ============================================================
+loadExamples();
+loadOpcodes();
+</script>
+</body>
+</html>

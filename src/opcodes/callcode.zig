@@ -97,7 +97,7 @@ fn execute(evm: *EVM) !void {
     // Calculate gas to pass
     const gas_requested: u64 = if (gas_big.fitsInU64()) gas_big.data[0] else std.math.maxInt(u64);
     const gas_available = evm.gas - (evm.gas / 64);
-    var call_gas = @min(gas_requested, gas_available);
+    const call_gas = @min(gas_requested, gas_available);
     _ = call_gas;
 
     // In a full implementation:

@@ -461,7 +461,7 @@ pub const BigInt = struct {
                 if (i >= word_shift) {
                     result.data[i] = self.data[i - word_shift] << bit_shift;
                     if (i > word_shift) {
-                        result.data[i] |= self.data[i - word_shift - 1] >> @as(u6, 64 - bit_shift);
+                        result.data[i] |= self.data[i - word_shift - 1] >> @as(u6, @intCast(@as(u7, 64) - @as(u7, bit_shift)));
                     }
                 }
             }
@@ -500,7 +500,7 @@ pub const BigInt = struct {
                 if (i + word_shift < 4) {
                     result.data[i] = self.data[i + word_shift] >> bit_shift;
                     if (i + word_shift + 1 < 4) {
-                        result.data[i] |= self.data[i + word_shift + 1] << @as(u6, 64 - bit_shift);
+                        result.data[i] |= self.data[i + word_shift + 1] << @as(u6, @intCast(@as(u7, 64) - @as(u7, bit_shift)));
                     }
                 }
             }

@@ -24,157 +24,198 @@
   --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: var(--mono); background: var(--bg); color: var(--text); min-height: 100vh; }
+body { font-family: var(--mono); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 13px; }
 a { color: var(--blue); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 /* Header */
-.header { background: var(--surface); border-bottom: 1px solid var(--surface2); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
-.header h1 { font-size: 18px; font-weight: 600; }
+.header { background: var(--surface); border-bottom: 1px solid var(--surface2); padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; }
+.header h1 { font-size: 16px; font-weight: 600; }
 .header h1 span { color: var(--peach); }
-.header-links { display: flex; gap: 16px; font-size: 13px; }
-.header-links a { color: var(--subtext); }
+.header-right { display: flex; gap: 16px; font-size: 12px; align-items: center; }
+.header-right a { color: var(--subtext); }
 
 /* Tabs */
-.tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--surface2); padding: 0 24px; gap: 0; }
-.tab { padding: 10px 20px; cursor: pointer; font-size: 13px; color: var(--subtext); border-bottom: 2px solid transparent; transition: all 0.15s; font-family: var(--mono); background: none; border-top: none; border-left: none; border-right: none; }
+.tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--surface2); padding: 0 24px; }
+.tab { padding: 9px 18px; cursor: pointer; font-size: 12px; color: var(--subtext); border-bottom: 2px solid transparent; transition: all 0.15s; font-family: var(--mono); background: none; border-top: none; border-left: none; border-right: none; }
 .tab:hover { color: var(--text); background: var(--surface2); }
 .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
 
-/* Main Layout */
 .content { display: none; padding: 16px 24px; }
 .content.active { display: block; }
 
-/* Playground Layout */
-.playground { display: grid; grid-template-columns: 380px 1fr; gap: 16px; height: calc(100vh - 120px); }
+/* Welcome Banner */
+.getting-started { background: linear-gradient(135deg, rgba(137,180,250,0.08), rgba(203,166,247,0.08)); border: 1px solid var(--surface2); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 14px; position: relative; }
+.getting-started h2 { font-size: 15px; margin-bottom: 6px; color: var(--blue); }
+.getting-started p { font-size: 12px; color: var(--subtext); line-height: 1.6; }
+.getting-started strong { color: var(--text); }
+.banner-close { position: absolute; top: 8px; right: 12px; background: none; border: none; color: var(--overlay); font-size: 18px; cursor: pointer; font-family: var(--mono); }
+.banner-close:hover { color: var(--text); }
+.banner-hint { margin-top: 10px; font-size: 11px; color: var(--blue); animation: bounce 2s infinite; }
+@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(3px)} }
+
+/* Playground Grid */
+.playground { display: grid; grid-template-columns: 380px 1fr; gap: 14px; height: calc(100vh - 130px); }
 .panel { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--surface2); overflow: hidden; }
-.panel-header { padding: 10px 14px; background: var(--surface2); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--subtext); display: flex; justify-content: space-between; align-items: center; }
-.panel-body { padding: 14px; overflow-y: auto; }
+.panel-header { padding: 8px 12px; background: var(--surface2); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--subtext); display: flex; justify-content: space-between; align-items: center; }
+.panel-body { padding: 12px; overflow-y: auto; }
 
 /* Left Panel */
-.left-panel { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+.left-panel { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
 .left-panel .panel { flex-shrink: 0; }
 
+/* Example Cards */
+.example-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+.example-card { background: var(--bg); border: 1px solid var(--surface2); border-radius: 6px; padding: 8px 10px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.example-card:hover { border-color: var(--blue); background: rgba(137,180,250,0.05); }
+.example-card-name { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+.example-card-desc { font-size: 10px; color: var(--subtext); line-height: 1.3; margin-bottom: 4px; }
+.example-card-tag { display: inline-block; font-size: 9px; padding: 1px 6px; background: rgba(137,180,250,0.12); color: var(--blue); border-radius: 8px; }
+
 /* Bytecode Editor */
-.editor-area { width: 100%; min-height: 120px; background: var(--bg); border: 1px solid var(--surface2); border-radius: 4px; color: var(--green); font-family: var(--mono); font-size: 13px; padding: 10px; resize: vertical; outline: none; }
+.editor-area { width: 100%; min-height: 80px; background: var(--bg); border: 1px solid var(--surface2); border-radius: 4px; color: var(--green); font-family: var(--mono); font-size: 13px; padding: 8px; resize: vertical; outline: none; }
 .editor-area:focus { border-color: var(--blue); }
 .editor-area::placeholder { color: var(--overlay); }
 
-/* Example Selector */
-select { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--surface2); border-radius: 4px; padding: 8px 10px; font-family: var(--mono); font-size: 12px; cursor: pointer; outline: none; }
-select:focus { border-color: var(--blue); }
-option { background: var(--bg); }
+/* Live Disassembly */
+.disasm-panel { margin-top: 6px; background: var(--bg); border: 1px solid var(--surface2); border-radius: 4px; max-height: 110px; overflow-y: auto; }
+.disasm-header { font-size: 9px; color: var(--overlay); text-transform: uppercase; padding: 3px 8px; border-bottom: 1px solid var(--surface2); letter-spacing: 0.5px; }
+.disasm-body { padding: 4px 8px; font-size: 11px; }
+.disasm-line { display: flex; gap: 6px; padding: 1px 0; }
+.disasm-pc { color: var(--overlay); min-width: 30px; }
+.disasm-op { color: var(--blue); font-weight: 600; min-width: 75px; }
+.disasm-operand { color: var(--peach); }
+.disasm-comment { color: var(--overlay); font-size: 10px; }
+.disasm-placeholder { color: var(--overlay); font-style: italic; }
 
-/* Config Row */
-.config-row { display: flex; gap: 8px; align-items: center; font-size: 12px; }
+/* Config */
+.config-row { display: flex; gap: 8px; align-items: center; font-size: 11px; margin-top: 6px; }
 .config-row label { color: var(--subtext); white-space: nowrap; }
-.config-row input[type="number"] { width: 100px; background: var(--bg); color: var(--text); border: 1px solid var(--surface2); border-radius: 4px; padding: 6px 8px; font-family: var(--mono); font-size: 12px; outline: none; }
+.config-row input { width: 90px; background: var(--bg); color: var(--text); border: 1px solid var(--surface2); border-radius: 4px; padding: 5px 7px; font-family: var(--mono); font-size: 11px; outline: none; }
 .config-row input:focus { border-color: var(--blue); }
 
 /* Buttons */
-.btn { padding: 8px 16px; border: none; border-radius: 4px; font-family: var(--mono); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.btn { padding: 7px 14px; border: none; border-radius: 4px; font-family: var(--mono); font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
 .btn-primary { background: var(--blue); color: var(--bg); }
 .btn-primary:hover { opacity: 0.85; }
 .btn-secondary { background: var(--surface2); color: var(--text); }
 .btn-secondary:hover { background: var(--overlay); }
-.btn-success { background: var(--green); color: var(--bg); }
-.btn-success:hover { opacity: 0.85; }
-.btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-sm { padding: 4px 10px; font-size: 10px; }
+.btn-group { display: flex; gap: 6px; margin-top: 8px; }
+
+/* Help Icon */
+.help-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: var(--surface2); color: var(--subtext); font-size: 9px; cursor: help; margin-left: 4px; position: relative; }
+.help-icon:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--bg); color: var(--text); border: 1px solid var(--surface2); border-radius: 4px; padding: 6px 10px; font-size: 11px; white-space: normal; width: 220px; z-index: 100; pointer-events: none; font-weight: normal; line-height: 1.4; }
 
 /* Opcode Palette */
-.opcode-palette { display: flex; flex-wrap: wrap; gap: 4px; }
-.opcode-btn { padding: 3px 6px; font-size: 10px; background: var(--bg); color: var(--subtext); border: 1px solid var(--surface2); border-radius: 3px; cursor: pointer; font-family: var(--mono); transition: all 0.1s; }
+.palette-category { font-size: 9px; color: var(--overlay); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; margin-bottom: 3px; }
+.palette-category:first-child { margin-top: 0; }
+.palette-group { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 2px; }
+.opcode-btn { padding: 2px 5px; font-size: 10px; background: var(--bg); color: var(--subtext); border: 1px solid var(--surface2); border-radius: 3px; cursor: pointer; font-family: var(--mono); transition: all 0.1s; }
 .opcode-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--blue); }
 
-/* Right Panel */
-.right-panel { display: flex; flex-direction: column; overflow: hidden; }
-.sub-tabs { display: flex; border-bottom: 1px solid var(--surface2); background: var(--surface2); }
-.sub-tab { padding: 8px 14px; cursor: pointer; font-size: 11px; color: var(--subtext); border: none; background: none; font-family: var(--mono); transition: all 0.1s; }
-.sub-tab:hover { color: var(--text); }
-.sub-tab.active { color: var(--blue); background: var(--surface); }
-.sub-content { display: none; flex: 1; overflow-y: auto; padding: 12px; }
-.sub-content.active { display: block; }
+/* ===== RIGHT PANEL ===== */
+.right-panel { display: flex; flex-direction: column; overflow: hidden; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--surface2); }
 
-/* Execution Trace Table */
+/* Exec Summary */
+.exec-summary { display: flex; align-items: center; gap: 14px; padding: 7px 12px; background: var(--surface2); border-bottom: 1px solid var(--surface); font-size: 11px; }
+.exec-badge { padding: 2px 10px; border-radius: 4px; font-weight: 700; font-size: 10px; }
+.exec-badge.success { background: var(--green); color: var(--bg); }
+.exec-badge.failed { background: var(--red); color: var(--bg); }
+.exec-stat { color: var(--subtext); }
+.exec-stat strong { color: var(--text); }
+
+/* Step Controls */
+.step-controls { display: flex; gap: 6px; align-items: center; padding: 6px 12px; background: var(--surface); border-bottom: 1px solid var(--surface2); }
+.step-info { font-size: 10px; color: var(--subtext); margin-left: auto; }
+
+/* Scrollable right content */
+.right-scroll { flex: 1; overflow-y: auto; }
+
+/* Sections */
+.section { border-bottom: 1px solid var(--surface2); }
+.section-header { padding: 8px 12px; font-size: 11px; font-weight: 600; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.5px; background: var(--surface2); }
+.collapsible .section-header { cursor: pointer; user-select: none; }
+.collapsible .section-header:hover { background: var(--overlay); }
+.collapse-arrow { display: inline-block; transition: transform 0.2s; font-size: 9px; margin-right: 4px; }
+.collapse-arrow.open { transform: rotate(90deg); }
+.section-body { padding: 10px 12px; }
+.section-body.collapsed { display: none; }
+
+/* Trace + Stack side by side */
+.trace-stack-split { display: grid; grid-template-columns: 1fr 250px; min-height: 250px; }
+.trace-side { overflow-y: auto; overflow-x: auto; padding: 8px; border-right: 1px solid var(--surface2); max-height: calc(100vh - 320px); }
+.stack-side { padding: 10px; overflow-y: auto; background: rgba(0,0,0,0.08); max-height: calc(100vh - 320px); }
+.stack-side-header { font-size: 10px; color: var(--subtext); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+
+/* Empty State */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--overlay); font-size: 12px; gap: 6px; padding: 30px 10px; }
+
+/* Trace Table */
 .trace-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-.trace-table th { padding: 6px 8px; text-align: left; color: var(--subtext); background: var(--surface2); position: sticky; top: 0; font-weight: 600; }
-.trace-table td { padding: 5px 8px; border-bottom: 1px solid var(--surface2); }
-.trace-table tr { cursor: pointer; transition: background 0.1s; }
-.trace-table tr:hover { background: var(--surface2); }
-.trace-table tr.active { background: rgba(137, 180, 250, 0.15); }
-.trace-table tr.error-row { background: rgba(243, 139, 168, 0.1); }
+.trace-table th { padding: 5px 6px; text-align: left; color: var(--subtext); background: var(--surface2); position: sticky; top: 0; font-weight: 600; font-size: 10px; z-index: 2; }
+.trace-table td { padding: 4px 6px; border-bottom: 1px solid var(--surface2); }
+.trace-table tr { cursor: pointer; transition: background 0.08s; }
+.trace-table tr:hover { background: rgba(137,180,250,0.08); }
+.trace-table tr.active { background: rgba(137,180,250,0.15); }
+.trace-table tr.error-row { background: rgba(243,139,168,0.1); }
 .opcode-cell { color: var(--blue); font-weight: 600; }
 .operand-cell { color: var(--peach); }
 .gas-cell { color: var(--yellow); }
-.stack-cell { color: var(--green); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.desc-cell { color: var(--subtext); font-size: 10px; font-style: italic; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Step Controls */
-.step-controls { display: flex; gap: 8px; align-items: center; padding: 8px 12px; background: var(--surface2); border-bottom: 1px solid var(--surface); }
-.step-info { font-size: 11px; color: var(--subtext); margin-left: auto; }
-
-/* Stack Visualizer */
-.stack-viz { display: flex; flex-direction: column-reverse; gap: 4px; max-height: calc(100vh - 250px); }
-.stack-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--bg); border: 1px solid var(--surface2); border-radius: 4px; font-size: 11px; transition: all 0.2s; }
-.stack-item.new { border-color: var(--green); background: rgba(166, 227, 161, 0.1); }
-.stack-index { color: var(--subtext); min-width: 24px; }
+/* Stack Viz */
+.stack-viz { display: flex; flex-direction: column; gap: 3px; }
+.stack-item { display: flex; align-items: center; gap: 6px; padding: 4px 8px; background: var(--bg); border: 1px solid var(--surface2); border-radius: 4px; font-size: 10px; transition: all 0.15s; }
+.stack-item.new { border-color: var(--green); background: rgba(166,227,161,0.08); }
+.stack-index { color: var(--overlay); min-width: 18px; font-size: 9px; }
 .stack-value { color: var(--green); word-break: break-all; flex: 1; }
-.stack-decimal { color: var(--subtext); font-size: 10px; }
+.stack-decimal { color: var(--subtext); font-size: 9px; }
 
 /* Gas Profile */
-.gas-bar-container { margin-bottom: 6px; }
-.gas-bar-label { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px; }
+.gas-summary { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.gas-stat { background: var(--bg); padding: 8px; border-radius: 4px; }
+.gas-stat-label { font-size: 9px; color: var(--subtext); text-transform: uppercase; }
+.gas-stat-value { font-size: 16px; font-weight: 600; margin-top: 2px; }
+.gas-bar-container { margin-bottom: 4px; }
+.gas-bar-label { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 1px; }
 .gas-bar-label .name { color: var(--blue); }
 .gas-bar-label .value { color: var(--yellow); }
-.gas-bar { height: 16px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.gas-bar { height: 14px; background: var(--bg); border-radius: 3px; overflow: hidden; }
 .gas-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
-.gas-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
-.gas-stat { background: var(--bg); padding: 10px; border-radius: 4px; }
-.gas-stat-label { font-size: 10px; color: var(--subtext); text-transform: uppercase; }
-.gas-stat-value { font-size: 18px; font-weight: 600; margin-top: 2px; }
 
-/* Memory View */
-.memory-grid { font-size: 11px; line-height: 1.8; }
-.memory-row { display: flex; gap: 2px; }
-.memory-offset { color: var(--subtext); min-width: 60px; }
-.memory-byte { color: var(--green); min-width: 22px; text-align: center; }
-.memory-byte.zero { color: var(--overlay); }
-.memory-ascii { color: var(--peach); margin-left: 8px; }
+/* Tab intro */
+.tab-intro { font-size: 12px; color: var(--subtext); margin-bottom: 12px; line-height: 1.5; }
 
-/* Empty State */
-.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 200px; color: var(--overlay); font-size: 13px; gap: 8px; }
-
-/* Opcode Reference Tab */
-.ref-controls { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
-.ref-search { flex: 1; min-width: 200px; background: var(--surface); border: 1px solid var(--surface2); border-radius: 4px; padding: 8px 12px; color: var(--text); font-family: var(--mono); font-size: 12px; outline: none; }
+/* Opcode Reference */
+.ref-controls { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
+.ref-search { flex: 1; min-width: 180px; background: var(--surface); border: 1px solid var(--surface2); border-radius: 4px; padding: 7px 10px; color: var(--text); font-family: var(--mono); font-size: 12px; outline: none; }
 .ref-search:focus { border-color: var(--blue); }
-.filter-btn { padding: 4px 10px; font-size: 11px; background: var(--surface); color: var(--subtext); border: 1px solid var(--surface2); border-radius: 12px; cursor: pointer; font-family: var(--mono); }
+.filter-btn { padding: 3px 9px; font-size: 10px; background: var(--surface); color: var(--subtext); border: 1px solid var(--surface2); border-radius: 12px; cursor: pointer; font-family: var(--mono); }
 .filter-btn:hover, .filter-btn.active { background: var(--blue); color: var(--bg); border-color: var(--blue); }
-.ref-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.ref-table th { padding: 8px 10px; text-align: left; color: var(--subtext); background: var(--surface); position: sticky; top: 0; font-weight: 600; border-bottom: 1px solid var(--surface2); }
-.ref-table td { padding: 6px 10px; border-bottom: 1px solid var(--surface2); }
+.ref-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.ref-table th { padding: 6px 8px; text-align: left; color: var(--subtext); background: var(--surface); position: sticky; top: 0; font-weight: 600; border-bottom: 1px solid var(--surface2); }
+.ref-table td { padding: 5px 8px; border-bottom: 1px solid var(--surface2); }
 .ref-table tr { cursor: pointer; transition: background 0.1s; }
 .ref-table tr:hover { background: var(--surface); }
 .ref-hex { color: var(--peach); }
 .ref-name { color: var(--blue); font-weight: 600; }
 .ref-gas { color: var(--yellow); }
-.ref-cat { color: var(--mauve); font-size: 10px; padding: 2px 6px; background: rgba(203, 166, 247, 0.1); border-radius: 8px; }
+.ref-cat { color: var(--mauve); font-size: 9px; padding: 1px 5px; background: rgba(203,166,247,0.1); border-radius: 8px; }
 
 /* Parallel Tab */
-.parallel-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; height: calc(100vh - 120px); }
-.parallel-config { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
-.parallel-results { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
-.stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-.stat-card { background: var(--bg); padding: 12px; border-radius: 6px; border: 1px solid var(--surface2); }
-.stat-card-label { font-size: 10px; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.5px; }
-.stat-card-value { font-size: 22px; font-weight: 700; margin-top: 4px; }
-.wave-viz { display: flex; flex-direction: column; gap: 6px; }
+.parallel-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; height: calc(100vh - 130px); }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.stat-card { background: var(--bg); padding: 10px; border-radius: 6px; border: 1px solid var(--surface2); }
+.stat-card-label { font-size: 9px; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-card-value { font-size: 20px; font-weight: 700; margin-top: 3px; }
+.wave-viz { display: flex; flex-direction: column; gap: 5px; }
 .wave-row { display: flex; align-items: center; gap: 8px; }
-.wave-label { font-size: 11px; color: var(--subtext); min-width: 60px; }
-.wave-bar { display: flex; gap: 4px; flex: 1; }
-.tx-block { padding: 4px 8px; border-radius: 3px; font-size: 10px; font-weight: 600; }
+.wave-label { font-size: 10px; color: var(--subtext); min-width: 55px; }
+.wave-bar { display: flex; gap: 3px; flex: 1; }
+.tx-block { padding: 3px 7px; border-radius: 3px; font-size: 9px; font-weight: 600; }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--overlay); }
@@ -182,6 +223,10 @@ option { background: var(--bg); }
 @media (max-width: 900px) {
   .playground { grid-template-columns: 1fr; height: auto; }
   .parallel-layout { grid-template-columns: 1fr; }
+  .trace-stack-split { grid-template-columns: 1fr; }
+  .stack-side { border-right: none; border-top: 1px solid var(--surface2); }
+  .example-cards { grid-template-columns: 1fr; }
+  .gas-summary { grid-template-columns: 1fr 1fr; }
 }
 </style>
 </head>
@@ -189,10 +234,8 @@ option { background: var(--bg); }
 
 <div class="header">
   <h1><span>Zig</span> EVM Playground</h1>
-  <div class="header-links">
+  <div class="header-right">
     <a href="https://github.com/cryptuon/zig-evm" target="_blank">GitHub</a>
-    <span style="color: var(--overlay)">|</span>
-    <span style="color: var(--subtext); font-size: 11px">96+ opcodes &middot; Parallel execution &middot; 256-bit math</span>
   </div>
 </div>
 
@@ -202,139 +245,151 @@ option { background: var(--bg); }
   <button class="tab" data-tab="reference">Opcode Reference</button>
 </div>
 
-<!-- Playground Tab -->
+<!-- ==================== PLAYGROUND TAB ==================== -->
 <div class="content active" id="tab-playground">
+
+  <div class="getting-started" id="getting-started-banner">
+    <button class="banner-close" id="banner-close">&times;</button>
+    <h2>Welcome to the EVM Playground</h2>
+    <p>The Ethereum Virtual Machine executes <strong>bytecode</strong> &mdash; a sequence of hex-encoded instructions. Each opcode manipulates a <strong>stack</strong> of 256-bit values. Pick an example below to see it in action, or type your own bytecode.</p>
+    <div class="banner-hint">&#8595; Click an example to get started</div>
+  </div>
+
   <div class="playground">
+    <!-- LEFT PANEL -->
     <div class="left-panel">
       <div class="panel">
-        <div class="panel-header">Bytecode Input</div>
+        <div class="panel-header">Examples</div>
         <div class="panel-body">
-          <select id="example-select">
-            <option value="">-- Load Example --</option>
-          </select>
-          <textarea class="editor-area" id="bytecode-input" placeholder="Enter EVM bytecode hex (e.g. 6003600401)" spellcheck="false" rows="5" style="margin-top: 8px;"></textarea>
-          <div class="config-row" style="margin-top: 8px;">
-            <label>Gas Limit:</label>
-            <input type="number" id="gas-limit" value="100000" min="1" max="30000000">
-            <label style="margin-left: 8px;">Calldata:</label>
-            <input type="number" id="calldata-input" value="" placeholder="hex" style="width: 80px; background: var(--bg); color: var(--text); border: 1px solid var(--surface2); border-radius: 4px; padding: 6px 8px; font-family: var(--mono); font-size: 12px;">
+          <div class="example-cards" id="example-cards"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">Bytecode Editor</div>
+        <div class="panel-body">
+          <textarea class="editor-area" id="bytecode-input" placeholder="Enter EVM bytecode hex, e.g. 60036004010060020200" spellcheck="false" rows="3"></textarea>
+          <div class="disasm-panel" id="disasm-panel">
+            <div class="disasm-header">Live Disassembly</div>
+            <div class="disasm-body" id="disasm-body">
+              <span class="disasm-placeholder">Type bytecode above to see decoded opcodes</span>
+            </div>
           </div>
-          <div class="btn-group" style="margin-top: 10px;">
-            <button class="btn btn-primary" id="btn-execute">Execute</button>
-            <button class="btn btn-success" id="btn-step">Step Through</button>
+          <div class="config-row">
+            <label>Gas Limit<span class="help-icon" data-tip="Gas measures computational effort. Each opcode costs gas. Execution halts if gas runs out. 100,000 is plenty for demos.">?</span></label>
+            <input type="number" id="gas-limit" value="100000" min="1" max="30000000">
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-primary" id="btn-run">Run</button>
             <button class="btn btn-secondary" id="btn-clear">Clear</button>
           </div>
         </div>
       </div>
+
       <div class="panel">
-        <div class="panel-header">Quick Insert</div>
-        <div class="panel-body">
-          <div class="opcode-palette" id="opcode-palette"></div>
+        <div class="panel-header">Quick Insert <span class="help-icon" data-tip="Click an opcode to append its hex code. PUSH opcodes need data bytes after them (e.g. PUSH1 + 1 byte like 03).">?</span></div>
+        <div class="panel-body" style="max-height: 200px; overflow-y: auto;">
+          <div id="opcode-palette"></div>
         </div>
       </div>
     </div>
 
-    <div class="right-panel panel">
-      <div class="sub-tabs">
-        <button class="sub-tab active" data-subtab="trace">Execution Trace</button>
-        <button class="sub-tab" data-subtab="stack">Stack</button>
-        <button class="sub-tab" data-subtab="gas">Gas Profile</button>
-        <button class="sub-tab" data-subtab="memory">Memory</button>
-        <button class="sub-tab" data-subtab="output">Output</button>
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+      <div class="exec-summary" id="exec-summary" style="display:none;">
+        <span class="exec-badge" id="exec-badge"></span>
+        <span class="exec-stat">Gas: <strong id="exec-gas"></strong></span>
+        <span class="exec-stat">Steps: <strong id="exec-steps"></strong></span>
       </div>
-      <div id="step-controls-container"></div>
-      <div class="sub-content active" id="subtab-trace">
-        <div class="empty-state" id="trace-empty">Execute bytecode to see the trace</div>
-        <table class="trace-table" id="trace-table" style="display:none;">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>PC</th>
-              <th>Opcode</th>
-              <th>Operand</th>
-              <th>Gas Cost</th>
-              <th>Gas Left</th>
-              <th>Stack (top)</th>
-            </tr>
-          </thead>
-          <tbody id="trace-body"></tbody>
-        </table>
+
+      <div class="step-controls" id="step-controls" style="display:none;">
+        <button class="btn btn-sm btn-secondary" id="btn-step-prev">&laquo; Prev</button>
+        <button class="btn btn-sm btn-secondary" id="btn-step-play">&#9654; Play</button>
+        <button class="btn btn-sm btn-secondary" id="btn-step-next">Next &raquo;</button>
+        <span class="step-info" id="step-info"></span>
       </div>
-      <div class="sub-content" id="subtab-stack">
-        <div class="empty-state" id="stack-empty">Execute bytecode to see the stack</div>
-        <div class="stack-viz" id="stack-viz"></div>
-      </div>
-      <div class="sub-content" id="subtab-gas">
-        <div class="empty-state" id="gas-empty">Execute bytecode to see gas profile</div>
-        <div id="gas-profile"></div>
-      </div>
-      <div class="sub-content" id="subtab-memory">
-        <div class="empty-state" id="memory-empty">Execute bytecode to see memory</div>
-        <div class="memory-grid" id="memory-view"></div>
-      </div>
-      <div class="sub-content" id="subtab-output">
-        <div class="empty-state" id="output-empty">Execute bytecode to see output</div>
-        <div id="output-view"></div>
+
+      <div class="right-scroll" id="right-scroll">
+        <!-- Trace + Stack side by side -->
+        <div class="section" id="section-trace">
+          <div class="trace-stack-split">
+            <div class="trace-side" id="trace-side">
+              <div class="empty-state" id="trace-empty">
+                <div>Run bytecode to see the execution trace</div>
+                <div style="font-size:11px; margin-top:4px;">Each row shows one opcode and how it changes the stack</div>
+              </div>
+              <table class="trace-table" id="trace-table" style="display:none;">
+                <thead><tr>
+                  <th>#</th><th>PC</th><th>Opcode</th><th>Operand</th><th>Gas</th><th>What it does</th>
+                </tr></thead>
+                <tbody id="trace-body"></tbody>
+              </table>
+            </div>
+            <div class="stack-side" id="stack-side">
+              <div class="stack-side-header">Stack at step <span id="stack-step-num">-</span></div>
+              <div class="stack-viz" id="stack-viz">
+                <div class="empty-state" style="height:100px;font-size:11px;">Stack appears here when you run or hover a trace row</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gas Profile (collapsible) -->
+        <div class="section collapsible" id="section-gas">
+          <div class="section-header" data-toggle="section-gas-body"><span class="collapse-arrow">&#9654;</span> Gas Profile</div>
+          <div class="section-body collapsed" id="section-gas-body"><div id="gas-profile"></div></div>
+        </div>
+
+        <!-- Output & Storage (collapsible) -->
+        <div class="section collapsible" id="section-output">
+          <div class="section-header" data-toggle="section-output-body"><span class="collapse-arrow">&#9654;</span> Output &amp; Storage</div>
+          <div class="section-body collapsed" id="section-output-body"><div id="output-view"></div></div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Parallel Execution Tab -->
+<!-- ==================== PARALLEL TAB ==================== -->
 <div class="content" id="tab-parallel">
+  <p class="tab-intro">Visualize how the EVM can execute multiple transactions in parallel when they don't touch the same addresses. Transactions that conflict on shared state must be serialized into separate "waves".</p>
   <div class="parallel-layout">
-    <div class="parallel-config">
+    <div style="display:flex;flex-direction:column;gap:10px;overflow-y:auto;">
       <div class="panel">
         <div class="panel-header">Scenario</div>
         <div class="panel-body">
-          <select id="parallel-scenario">
+          <select id="parallel-scenario" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--surface2);border-radius:4px;padding:7px;font-family:var(--mono);font-size:11px;">
             <option value="independent">Independent Transfers (max parallelism)</option>
             <option value="contention">Storage Contention (serialized)</option>
             <option value="mixed">Mixed Workload (partial parallelism)</option>
           </select>
-          <p style="font-size: 11px; color: var(--subtext); margin-top: 8px;" id="scenario-desc">
-            8 transactions between different addresses - all can run in parallel.
-          </p>
-          <div class="btn-group" style="margin-top: 12px;">
-            <button class="btn btn-primary" id="btn-parallel-run">Run Batch</button>
-          </div>
+          <p style="font-size:10px;color:var(--subtext);margin-top:6px;line-height:1.4;" id="scenario-desc">8 transactions between different addresses &mdash; all can run in parallel.</p>
+          <div class="btn-group"><button class="btn btn-primary" id="btn-parallel-run">Run Batch</button></div>
         </div>
       </div>
       <div class="panel">
         <div class="panel-header">Transactions</div>
-        <div class="panel-body" id="tx-list" style="font-size: 11px; max-height: 400px; overflow-y: auto;">
-          <div class="empty-state" style="height: 100px;">Select a scenario and run</div>
+        <div class="panel-body" id="tx-list" style="font-size:10px;max-height:350px;overflow-y:auto;">
+          <div class="empty-state" style="height:80px;">Select a scenario and click Run Batch</div>
         </div>
       </div>
     </div>
-    <div class="parallel-results">
+    <div style="display:flex;flex-direction:column;gap:10px;overflow-y:auto;">
       <div class="panel">
         <div class="panel-header">Execution Stats</div>
         <div class="panel-body">
           <div class="stat-grid" id="parallel-stats">
-            <div class="stat-card">
-              <div class="stat-card-label">Transactions</div>
-              <div class="stat-card-value" style="color: var(--text);">-</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-card-label">Parallel Waves</div>
-              <div class="stat-card-value" style="color: var(--blue);">-</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-card-label">Max Parallelism</div>
-              <div class="stat-card-value" style="color: var(--green);">-</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-card-label">Total Gas</div>
-              <div class="stat-card-value" style="color: var(--yellow);">-</div>
-            </div>
+            <div class="stat-card"><div class="stat-card-label">Transactions</div><div class="stat-card-value" style="color:var(--text);">-</div></div>
+            <div class="stat-card"><div class="stat-card-label">Parallel Waves</div><div class="stat-card-value" style="color:var(--blue);">-</div></div>
+            <div class="stat-card"><div class="stat-card-label">Max Parallelism</div><div class="stat-card-value" style="color:var(--green);">-</div></div>
+            <div class="stat-card"><div class="stat-card-label">Speedup</div><div class="stat-card-value" style="color:var(--peach);">-</div></div>
           </div>
         </div>
       </div>
-      <div class="panel" style="flex: 1;">
+      <div class="panel" style="flex:1;">
         <div class="panel-header">Execution Waves</div>
         <div class="panel-body">
-          <div class="empty-state" id="waves-empty">Run a batch to see wave visualization</div>
+          <div class="empty-state" id="waves-empty" style="height:100px;">Run a batch to see wave visualization</div>
           <div class="wave-viz" id="wave-viz"></div>
         </div>
       </div>
@@ -342,8 +397,9 @@ option { background: var(--bg); }
   </div>
 </div>
 
-<!-- Opcode Reference Tab -->
+<!-- ==================== OPCODE REFERENCE TAB ==================== -->
 <div class="content" id="tab-reference">
+  <p class="tab-intro">Complete reference of all EVM opcodes supported by zig-evm. Click any row to insert its hex code into the bytecode editor.</p>
   <div class="ref-controls">
     <input type="text" class="ref-search" id="ref-search" placeholder="Search opcodes...">
     <button class="filter-btn active" data-cat="all">All</button>
@@ -360,17 +416,7 @@ option { background: var(--bg); }
     <button class="filter-btn" data-cat="logging">Logging</button>
   </div>
   <table class="ref-table">
-    <thead>
-      <tr>
-        <th>Hex</th>
-        <th>Opcode</th>
-        <th>Gas</th>
-        <th>In</th>
-        <th>Out</th>
-        <th>Description</th>
-        <th>Category</th>
-      </tr>
-    </thead>
+    <thead><tr><th>Hex</th><th>Opcode</th><th>Gas</th><th>In</th><th>Out</th><th>Description</th><th>Category</th></tr></thead>
     <tbody id="ref-body"></tbody>
   </table>
 </div>
@@ -379,12 +425,9 @@ option { background: var(--bg); }
 // ============================================================
 // State
 // ============================================================
-let traceData = null;
-let currentStep = -1;
-let stepping = false;
-let stepTimer = null;
-let opcodeData = [];
-let exampleData = [];
+let traceData = null, currentStep = -1, stepTimer = null;
+let opcodeData = [], exampleData = [], opcodeMap = {};
+let disasmTimer = null, stepControlsWired = false;
 
 // ============================================================
 // Tab Navigation
@@ -397,709 +440,487 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
   });
 });
-document.querySelectorAll('.sub-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.sub-content').forEach(c => c.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('subtab-' + tab.dataset.subtab).classList.add('active');
+
+// ============================================================
+// API
+// ============================================================
+async function apiGet(path) { return (await fetch(path)).json(); }
+async function apiPost(path, body) { return (await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })).json(); }
+
+// ============================================================
+// Helpers
+// ============================================================
+function hexDec(hex) {
+  if (!hex || hex==='0x' || hex==='0x0' || hex==='0x00') return '0';
+  try { const v=BigInt(hex); return v<1000000n?v.toString():v.toString().slice(0,8)+'...'; } catch{return '?';}
+}
+function fullDec(hex) {
+  if (!hex || hex==='0x') return '0';
+  try { return BigInt(hex).toString(); } catch{return '?';}
+}
+function shortHex(hex,n){if(!hex)return'';n=n||16;return hex.length<=n?hex:hex.slice(0,n-2)+'..';}
+
+// ============================================================
+// Banner
+// ============================================================
+function setupBanner() {
+  if (localStorage.getItem('evmBannerDismissed')) {
+    document.getElementById('getting-started-banner').style.display='none'; return;
+  }
+  document.getElementById('banner-close').addEventListener('click', ()=>{
+    document.getElementById('getting-started-banner').style.display='none';
+    localStorage.setItem('evmBannerDismissed','1');
   });
-});
-
-// ============================================================
-// API Calls
-// ============================================================
-async function apiGet(path) {
-  const res = await fetch(path);
-  return res.json();
-}
-async function apiPost(path, body) {
-  const res = await fetch(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return res.json();
 }
 
 // ============================================================
-// Hex Helpers
+// Examples (cards)
 // ============================================================
-function hexToDecimal(hex) {
-  if (!hex || hex === '0x' || hex === '0x0' || hex === '0x00') return '0';
-  try {
-    const val = BigInt(hex);
-    if (val < 1000000n) return val.toString();
-    return val.toString().slice(0, 8) + '...';
-  } catch { return '?'; }
-}
+const exampleTags = {
+  'Simple Addition':'Stack basics','Stack Operations':'Stack manipulation',
+  'Memory Store & Load':'Memory ops','Comparison & Conditional':'Comparisons',
+  'Bitwise Operations':'Bitwise logic','Counter Loop':'Control flow',
+  'Fibonacci (5th number)':'Advanced loops','Return Data':'Return values',
+};
 
-function shortHex(hex, maxLen) {
-  if (!hex) return '';
-  maxLen = maxLen || 18;
-  if (hex.length <= maxLen) return hex;
-  return hex.slice(0, maxLen - 3) + '...';
-}
-
-// ============================================================
-// Load Examples & Opcodes
-// ============================================================
 async function loadExamples() {
   try {
     exampleData = await apiGet('/api/examples');
-    const sel = document.getElementById('example-select');
+    const container = document.getElementById('example-cards');
+    container.innerHTML = '';
     exampleData.forEach((ex, i) => {
-      const opt = document.createElement('option');
-      opt.value = i;
-      opt.textContent = ex.name + ' - ' + ex.description;
-      sel.appendChild(opt);
+      const card = document.createElement('div');
+      card.className = 'example-card';
+      card.innerHTML = `<div class="example-card-name">${ex.name}</div><div class="example-card-desc">${ex.description}</div><div class="example-card-tag">${exampleTags[ex.name]||'General'}</div>`;
+      card.addEventListener('click', () => {
+        document.getElementById('bytecode-input').value = ex.bytecode;
+        document.getElementById('gas-limit').value = ex.gas_limit||100000;
+        executeTrace();
+      });
+      container.appendChild(card);
     });
-  } catch(e) { console.error('Failed to load examples', e); }
+  } catch(e) { console.error('Failed to load examples',e); }
 }
 
+// ============================================================
+// Opcodes
+// ============================================================
 async function loadOpcodes() {
   try {
     opcodeData = await apiGet('/api/opcodes');
+    opcodeData.forEach(op => { opcodeMap[op.code] = op; });
     renderOpcodeReference();
     renderOpcodePalette();
-  } catch(e) { console.error('Failed to load opcodes', e); }
+  } catch(e) { console.error('Failed to load opcodes',e); }
 }
 
-document.getElementById('example-select').addEventListener('change', (e) => {
-  const idx = parseInt(e.target.value);
-  if (!isNaN(idx) && exampleData[idx]) {
-    document.getElementById('bytecode-input').value = exampleData[idx].bytecode;
-    document.getElementById('gas-limit').value = exampleData[idx].gas_limit || 100000;
-  }
-});
-
 // ============================================================
-// Opcode Palette
+// Opcode Palette (grouped)
 // ============================================================
 function renderOpcodePalette() {
   const palette = document.getElementById('opcode-palette');
-  const common = [
-    { name: 'STOP', hex: '00' },
-    { name: 'ADD', hex: '01' },
-    { name: 'MUL', hex: '02' },
-    { name: 'SUB', hex: '03' },
-    { name: 'DIV', hex: '04' },
-    { name: 'MOD', hex: '06' },
-    { name: 'EQ', hex: '14' },
-    { name: 'LT', hex: '10' },
-    { name: 'GT', hex: '11' },
-    { name: 'AND', hex: '16' },
-    { name: 'OR', hex: '17' },
-    { name: 'XOR', hex: '18' },
-    { name: 'NOT', hex: '19' },
-    { name: 'SHL', hex: '1b' },
-    { name: 'SHR', hex: '1c' },
-    { name: 'POP', hex: '50' },
-    { name: 'MLOAD', hex: '51' },
-    { name: 'MSTORE', hex: '52' },
-    { name: 'SLOAD', hex: '54' },
-    { name: 'SSTORE', hex: '55' },
-    { name: 'JUMP', hex: '56' },
-    { name: 'JUMPI', hex: '57' },
-    { name: 'JUMPDEST', hex: '5b' },
-    { name: 'PUSH1', hex: '60' },
-    { name: 'PUSH2', hex: '61' },
-    { name: 'PUSH4', hex: '63' },
-    { name: 'PUSH32', hex: '7f' },
-    { name: 'DUP1', hex: '80' },
-    { name: 'DUP2', hex: '81' },
-    { name: 'SWAP1', hex: '90' },
-    { name: 'SWAP2', hex: '91' },
-    { name: 'RETURN', hex: 'f3' },
-    { name: 'REVERT', hex: 'fd' },
-  ];
-  palette.innerHTML = '';
-  common.forEach(op => {
-    const btn = document.createElement('button');
-    btn.className = 'opcode-btn';
-    btn.textContent = op.name;
-    btn.title = '0x' + op.hex;
-    btn.addEventListener('click', () => {
-      const input = document.getElementById('bytecode-input');
-      input.value += op.hex;
-      input.focus();
+  const groups = {
+    'Arithmetic': [{n:'ADD',h:'01'},{n:'SUB',h:'03'},{n:'MUL',h:'02'},{n:'DIV',h:'04'},{n:'MOD',h:'06'},{n:'EXP',h:'0a'}],
+    'Compare': [{n:'LT',h:'10'},{n:'GT',h:'11'},{n:'EQ',h:'14'},{n:'ISZERO',h:'15'}],
+    'Bitwise': [{n:'AND',h:'16'},{n:'OR',h:'17'},{n:'XOR',h:'18'},{n:'NOT',h:'19'},{n:'SHL',h:'1b'},{n:'SHR',h:'1c'}],
+    'Stack': [{n:'PUSH1',h:'60'},{n:'PUSH2',h:'61'},{n:'PUSH4',h:'63'},{n:'PUSH32',h:'7f'},{n:'POP',h:'50'},{n:'DUP1',h:'80'},{n:'DUP2',h:'81'},{n:'SWAP1',h:'90'},{n:'SWAP2',h:'91'}],
+    'Memory': [{n:'MLOAD',h:'51'},{n:'MSTORE',h:'52'},{n:'SLOAD',h:'54'},{n:'SSTORE',h:'55'}],
+    'Control': [{n:'STOP',h:'00'},{n:'JUMP',h:'56'},{n:'JUMPI',h:'57'},{n:'JUMPDEST',h:'5b'},{n:'RETURN',h:'f3'},{n:'REVERT',h:'fd'}],
+  };
+  palette.innerHTML='';
+  for (const [cat,ops] of Object.entries(groups)) {
+    const lbl=document.createElement('div'); lbl.className='palette-category'; lbl.textContent=cat; palette.appendChild(lbl);
+    const grp=document.createElement('div'); grp.className='palette-group';
+    ops.forEach(op=>{
+      const btn=document.createElement('button'); btn.className='opcode-btn'; btn.textContent=op.n;
+      const info=opcodeMap[parseInt(op.h,16)];
+      btn.title=info?`0x${op.h} | ${info.description}\nGas: ${info.gas} | Pops ${info.stack_in}, Pushes ${info.stack_out}`:`0x${op.h}`;
+      btn.addEventListener('click',()=>{ document.getElementById('bytecode-input').value+=op.h; triggerDisasm(); });
+      grp.appendChild(btn);
     });
-    palette.appendChild(btn);
+    palette.appendChild(grp);
+  }
+}
+
+// ============================================================
+// Live Disassembly
+// ============================================================
+function setupLiveDisasm() {
+  document.getElementById('bytecode-input').addEventListener('input', ()=>{ clearTimeout(disasmTimer); disasmTimer=setTimeout(fetchDisasm,400); });
+}
+function triggerDisasm() { clearTimeout(disasmTimer); disasmTimer=setTimeout(fetchDisasm,200); }
+
+async function fetchDisasm() {
+  const hex=document.getElementById('bytecode-input').value.trim().replace(/\s/g,'');
+  const body=document.getElementById('disasm-body');
+  if(!hex||hex.length<2){body.innerHTML='<span class="disasm-placeholder">Type bytecode above to see decoded opcodes</span>';return;}
+  try {
+    const data=await apiPost('/api/disassemble',{bytecode:hex});
+    if(!data.instructions||!data.instructions.length){body.innerHTML='<span class="disasm-placeholder">No valid instructions</span>';return;}
+    body.innerHTML=data.instructions.map(inst=>{
+      const info=opcodeMap[inst.opcode];
+      const cmt=info?` <span class="disasm-comment">// ${info.description}</span>`:'';
+      return `<div class="disasm-line"><span class="disasm-pc">${String(inst.pc).padStart(4,'0')}</span><span class="disasm-op">${inst.opcode_name}</span><span class="disasm-operand">${inst.operand||''}</span>${cmt}</div>`;
+    }).join('');
+  } catch(e){body.innerHTML='<span class="disasm-placeholder">Error</span>';}
+}
+
+// ============================================================
+// Collapsible Sections
+// ============================================================
+function setupCollapsible() {
+  document.querySelectorAll('.collapsible .section-header').forEach(hdr=>{
+    hdr.addEventListener('click',()=>{
+      const body=document.getElementById(hdr.dataset.toggle);
+      const arrow=hdr.querySelector('.collapse-arrow');
+      if(body.classList.contains('collapsed')){body.classList.remove('collapsed');arrow&&arrow.classList.add('open');}
+      else{body.classList.add('collapsed');arrow&&arrow.classList.remove('open');}
+    });
   });
+}
+function expandSection(id){
+  const body=document.getElementById(id);if(!body)return;
+  body.classList.remove('collapsed');
+  const hdr=document.querySelector(`[data-toggle="${id}"]`);
+  if(hdr){const a=hdr.querySelector('.collapse-arrow');a&&a.classList.add('open');}
+}
+
+// ============================================================
+// Annotated Descriptions (core educational feature)
+// ============================================================
+function annotateStep(steps, idx) {
+  const step=steps[idx], prev=idx>0?steps[idx-1].stack:[], curr=step.stack, name=step.opcode_name, operand=step.operand;
+  function d(h){if(!h||h==='0x')return'0';try{const v=BigInt(h);return v<1000000n?v.toString():shortHex(h,12);}catch{return'?';}}
+  function top(s,n){return s.length>=n?d(s[s.length-n]):'?';}
+  function res(){return curr.length>0?d(curr[curr.length-1]):'?';}
+
+  if(name.startsWith('PUSH'))return `Push ${d(operand||'0x0')} onto stack`;
+  const arith={ADD:'+',MUL:'*',SUB:'-',DIV:'/',MOD:'%',EXP:'**'};
+  if(arith[name]&&prev.length>=2)return `${top(prev,1)} ${arith[name]} ${top(prev,2)} = ${res()}`;
+  const cmp={LT:'<',GT:'>',SLT:'<(signed)',SGT:'>(signed)',EQ:'=='};
+  if(cmp[name]&&prev.length>=2)return `${top(prev,1)} ${cmp[name]} ${top(prev,2)} ? ${res()}`;
+  if(name==='ISZERO'&&prev.length>=1)return `${top(prev,1)} == 0 ? ${res()}`;
+  const bw={AND:'AND',OR:'OR',XOR:'XOR'};
+  if(bw[name]&&prev.length>=2)return `${top(prev,1)} ${bw[name]} ${top(prev,2)} = ${res()}`;
+  if(name==='NOT'&&prev.length>=1)return `NOT ${top(prev,1)}`;
+  if((name==='SHL'||name==='SHR'||name==='SAR')&&prev.length>=2)return `Shift ${top(prev,2)} ${name==='SHL'?'left':'right'} by ${top(prev,1)}`;
+  if(name.startsWith('DUP')){const n=parseInt(name.slice(3));const i=prev.length-n;return `Duplicate stack[${n-1}]${i>=0?' ('+d(prev[i])+')':''}`;}
+  if(name.startsWith('SWAP'))return `Swap top with stack[${parseInt(name.slice(4))}]`;
+  if(name==='POP'&&prev.length>=1)return `Discard ${top(prev,1)}`;
+  if(name==='MSTORE'&&prev.length>=2)return `Store ${top(prev,2)} at memory[${top(prev,1)}]`;
+  if(name==='MSTORE8'&&prev.length>=2)return `Store byte at memory[${top(prev,1)}]`;
+  if(name==='MLOAD'&&prev.length>=1)return `Load memory[${top(prev,1)}] -> ${res()}`;
+  if(name==='SSTORE'&&prev.length>=2)return `Store ${top(prev,2)} at storage[${top(prev,1)}]`;
+  if(name==='SLOAD'&&prev.length>=1)return `Load storage[${top(prev,1)}] -> ${res()}`;
+  if(name==='JUMP'&&prev.length>=1)return `Jump to PC ${top(prev,1)}`;
+  if(name==='JUMPI'&&prev.length>=2){const c=top(prev,2);return c!=='0'?`Jump to PC ${top(prev,1)} (taken)`:`Jump to PC ${top(prev,1)} (not taken)`;}
+  if(name==='JUMPDEST')return 'Valid jump target';
+  if(name==='STOP')return 'Halt execution';
+  if(name==='RETURN'&&prev.length>=2)return `Return ${top(prev,2)} bytes from memory[${top(prev,1)}]`;
+  if(name==='REVERT'&&prev.length>=2)return `Revert with ${top(prev,2)} bytes`;
+  if(name==='PC')return `Push current PC (${step.pc})`;
+  if(name==='MSIZE')return `Push memory size`;
+  if(name==='GAS')return `Push remaining gas`;
+  if(name==='CALLDATASIZE')return 'Push calldata size';
+  if(name==='CALLDATALOAD'&&prev.length>=1)return `Load calldata[${top(prev,1)}]`;
+  if(name.startsWith('LOG'))return `Emit ${name} event`;
+  const info=opcodeMap[step.opcode];
+  return info?info.description:'';
 }
 
 // ============================================================
 // Execute
 // ============================================================
-document.getElementById('btn-execute').addEventListener('click', async () => {
-  const bytecode = document.getElementById('bytecode-input').value.trim().replace(/\s/g, '');
-  const gasLimit = parseInt(document.getElementById('gas-limit').value) || 100000;
-  if (!bytecode) return;
-
-  document.getElementById('btn-execute').textContent = 'Running...';
-  document.getElementById('btn-execute').disabled = true;
-
+async function executeTrace() {
+  const bytecode=document.getElementById('bytecode-input').value.trim().replace(/\s/g,'');
+  const gasLimit=parseInt(document.getElementById('gas-limit').value)||100000;
+  if(!bytecode)return;
+  const btn=document.getElementById('btn-run'); btn.textContent='Running...'; btn.disabled=true;
   try {
-    traceData = await apiPost('/api/execute-trace', {
-      bytecode: bytecode,
-      gas_limit: gasLimit,
-    });
-    currentStep = -1;
-    stepping = false;
+    traceData=await apiPost('/api/execute-trace',{bytecode,gas_limit:gasLimit});
+    currentStep=-1;
+    if(stepTimer){clearInterval(stepTimer);stepTimer=null;}
+    renderExecSummary();
     renderTrace();
+    showStepControls();
     renderGasProfile();
     renderOutput();
-    // Show all steps by default
-    if (traceData.steps && traceData.steps.length > 0) {
-      selectStep(traceData.steps.length - 1);
-    }
-  } catch(e) {
-    console.error(e);
-  } finally {
-    document.getElementById('btn-execute').textContent = 'Execute';
-    document.getElementById('btn-execute').disabled = false;
-  }
-});
+    fetchDisasm();
+    if(traceData.steps&&traceData.steps.length>0)selectStep(traceData.steps.length-1);
+  }catch(e){console.error(e);}
+  finally{btn.textContent='Run';btn.disabled=false;}
+}
+document.getElementById('btn-run').addEventListener('click', executeTrace);
 
-document.getElementById('btn-step').addEventListener('click', () => {
-  const bytecode = document.getElementById('bytecode-input').value.trim().replace(/\s/g, '');
-  const gasLimit = parseInt(document.getElementById('gas-limit').value) || 100000;
-  if (!bytecode) return;
-
-  if (!traceData || !stepping) {
-    // Start new step-through
-    stepping = true;
-    currentStep = -1;
-    apiPost('/api/execute-trace', { bytecode, gas_limit: gasLimit }).then(data => {
-      traceData = data;
-      renderTrace();
-      renderStepControls();
-      advanceStep();
-    });
-  } else {
-    advanceStep();
-  }
-});
-
-document.getElementById('btn-clear').addEventListener('click', () => {
-  traceData = null;
-  currentStep = -1;
-  stepping = false;
-  if (stepTimer) { clearInterval(stepTimer); stepTimer = null; }
-  document.getElementById('trace-table').style.display = 'none';
-  document.getElementById('trace-empty').style.display = 'flex';
-  document.getElementById('trace-body').innerHTML = '';
-  document.getElementById('stack-viz').innerHTML = '';
-  document.getElementById('stack-empty').style.display = 'flex';
-  document.getElementById('gas-profile').innerHTML = '';
-  document.getElementById('gas-empty').style.display = 'flex';
-  document.getElementById('memory-view').innerHTML = '';
-  document.getElementById('memory-empty').style.display = 'flex';
-  document.getElementById('output-view').innerHTML = '';
-  document.getElementById('output-empty').style.display = 'flex';
-  document.getElementById('step-controls-container').innerHTML = '';
-});
+// ============================================================
+// Exec Summary
+// ============================================================
+function renderExecSummary(){
+  if(!traceData)return;
+  document.getElementById('exec-summary').style.display='flex';
+  const badge=document.getElementById('exec-badge');
+  badge.textContent=traceData.success?'SUCCESS':'FAILED';
+  badge.className='exec-badge '+(traceData.success?'success':'failed');
+  document.getElementById('exec-gas').textContent=traceData.total_gas_used.toLocaleString()+' / '+traceData.gas_limit.toLocaleString();
+  document.getElementById('exec-steps').textContent=traceData.steps.length;
+}
 
 // ============================================================
 // Step Controls
 // ============================================================
-function renderStepControls() {
-  if (!traceData || !traceData.steps) return;
-  const container = document.getElementById('step-controls-container');
-  container.innerHTML = `
-    <div class="step-controls">
-      <button class="btn btn-secondary" id="btn-step-prev" style="padding:4px 10px;font-size:11px;">&laquo; Prev</button>
-      <button class="btn btn-secondary" id="btn-step-next" style="padding:4px 10px;font-size:11px;">Next &raquo;</button>
-      <button class="btn btn-secondary" id="btn-step-play" style="padding:4px 10px;font-size:11px;">Play</button>
-      <button class="btn btn-secondary" id="btn-step-end" style="padding:4px 10px;font-size:11px;">End</button>
-      <span class="step-info" id="step-info">Step - / ${traceData.steps.length}</span>
-    </div>
-  `;
-  document.getElementById('btn-step-prev').addEventListener('click', () => {
-    if (currentStep > 0) selectStep(currentStep - 1);
-  });
-  document.getElementById('btn-step-next').addEventListener('click', advanceStep);
-  document.getElementById('btn-step-play').addEventListener('click', () => {
-    if (stepTimer) {
-      clearInterval(stepTimer);
-      stepTimer = null;
-      document.getElementById('btn-step-play').textContent = 'Play';
-    } else {
-      document.getElementById('btn-step-play').textContent = 'Pause';
-      stepTimer = setInterval(() => {
-        if (currentStep >= traceData.steps.length - 1) {
-          clearInterval(stepTimer);
-          stepTimer = null;
-          document.getElementById('btn-step-play').textContent = 'Play';
-          return;
-        }
-        advanceStep();
-      }, 300);
-    }
-  });
-  document.getElementById('btn-step-end').addEventListener('click', () => {
-    if (stepTimer) { clearInterval(stepTimer); stepTimer = null; }
-    selectStep(traceData.steps.length - 1);
-  });
+function showStepControls(){
+  document.getElementById('step-controls').style.display='flex';
+  updateStepInfo();
+  if(stepControlsWired)return; stepControlsWired=true;
+  document.getElementById('btn-step-prev').addEventListener('click',()=>{if(currentStep>0)selectStep(currentStep-1);});
+  document.getElementById('btn-step-next').addEventListener('click',()=>{if(traceData&&currentStep<traceData.steps.length-1)selectStep(currentStep+1);});
+  document.getElementById('btn-step-play').addEventListener('click',togglePlay);
 }
-
-function advanceStep() {
-  if (!traceData || !traceData.steps) return;
-  if (currentStep < traceData.steps.length - 1) {
-    selectStep(currentStep + 1);
-  }
+function togglePlay(){
+  const btn=document.getElementById('btn-step-play');
+  if(stepTimer){clearInterval(stepTimer);stepTimer=null;btn.innerHTML='&#9654; Play';return;}
+  btn.innerHTML='&#10074;&#10074; Pause';
+  stepTimer=setInterval(()=>{
+    if(!traceData||currentStep>=traceData.steps.length-1){clearInterval(stepTimer);stepTimer=null;btn.innerHTML='&#9654; Play';return;}
+    selectStep(currentStep+1);
+  },300);
 }
-
-function selectStep(idx) {
-  currentStep = idx;
-  const step = traceData.steps[idx];
-  if (!step) return;
-
-  // Update step info
-  const info = document.getElementById('step-info');
-  if (info) info.textContent = `Step ${idx + 1} / ${traceData.steps.length}`;
-
-  // Highlight trace row
-  document.querySelectorAll('#trace-body tr').forEach((tr, i) => {
-    tr.classList.toggle('active', i === idx);
-  });
-
-  // Scroll to row
-  const row = document.querySelectorAll('#trace-body tr')[idx];
-  if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-
-  // Update stack
-  renderStackAtStep(idx);
-  // Update memory
-  renderMemoryAtStep(idx);
+function updateStepInfo(){
+  const el=document.getElementById('step-info');
+  if(!traceData)return;
+  el.textContent=currentStep>=0?`Step ${currentStep+1} / ${traceData.steps.length}`:`${traceData.steps.length} steps`;
 }
 
 // ============================================================
-// Render Trace Table
+// Trace Table
 // ============================================================
-function renderTrace() {
-  if (!traceData || !traceData.steps) return;
-  document.getElementById('trace-empty').style.display = 'none';
-  document.getElementById('trace-table').style.display = 'table';
-
-  const tbody = document.getElementById('trace-body');
-  tbody.innerHTML = '';
-
-  traceData.steps.forEach((step, i) => {
-    const tr = document.createElement('tr');
-    if (step.error_msg) tr.classList.add('error-row');
-
-    const stackTop = step.stack.length > 0
-      ? step.stack.slice(-3).reverse().map(s => shortHex(s, 14)).join(', ')
-      : '(empty)';
-
-    tr.innerHTML = `
-      <td>${step.step}</td>
-      <td>${step.pc}</td>
-      <td class="opcode-cell">${step.opcode_name}</td>
-      <td class="operand-cell">${step.operand || ''}</td>
-      <td class="gas-cell">${step.gas_cost}</td>
-      <td>${step.gas_remaining.toLocaleString()}</td>
-      <td class="stack-cell" title="${step.stack.slice(-3).reverse().join('\n')}">${stackTop}</td>
-    `;
-    tr.addEventListener('click', () => selectStep(i));
+function renderTrace(){
+  if(!traceData||!traceData.steps)return;
+  document.getElementById('trace-empty').style.display='none';
+  document.getElementById('trace-table').style.display='table';
+  const tbody=document.getElementById('trace-body'); tbody.innerHTML='';
+  traceData.steps.forEach((step,i)=>{
+    const tr=document.createElement('tr');
+    if(step.error_msg)tr.classList.add('error-row');
+    const desc=annotateStep(traceData.steps,i);
+    tr.innerHTML=`<td>${step.step}</td><td>${step.pc}</td><td class="opcode-cell">${step.opcode_name}</td><td class="operand-cell">${step.operand||''}</td><td class="gas-cell">${step.gas_cost}</td><td class="desc-cell" title="${desc}">${desc}</td>`;
+    tr.addEventListener('click',()=>selectStep(i));
+    tr.addEventListener('mouseenter',()=>{document.getElementById('stack-step-num').textContent=i+1;renderStackAtStep(i);});
     tbody.appendChild(tr);
   });
-
-  if (stepping) renderStepControls();
 }
 
 // ============================================================
-// Stack Visualizer
+// Select Step
 // ============================================================
-function renderStackAtStep(idx) {
-  document.getElementById('stack-empty').style.display = 'none';
-  const container = document.getElementById('stack-viz');
-  const step = traceData.steps[idx];
-  if (!step) return;
-
-  const prevStack = idx > 0 ? traceData.steps[idx - 1].stack : [];
-
-  container.innerHTML = '';
-  if (step.stack.length === 0) {
-    container.innerHTML = '<div style="color: var(--overlay); font-size: 12px; text-align: center; padding: 20px;">Stack is empty</div>';
-    return;
-  }
-
-  // Show stack top to bottom (reversed display)
-  for (let i = step.stack.length - 1; i >= 0; i--) {
-    const val = step.stack[i];
-    const isNew = i >= prevStack.length || prevStack[i] !== val;
-    const div = document.createElement('div');
-    div.className = 'stack-item' + (isNew ? ' new' : '');
-    const stackPos = step.stack.length - 1 - i;
-    div.innerHTML = `
-      <span class="stack-index">${stackPos}</span>
-      <span class="stack-value">${shortHex(val, 30)}</span>
-      <span class="stack-decimal">${hexToDecimal(val)}</span>
-    `;
-    container.appendChild(div);
-  }
+function selectStep(idx){
+  currentStep=idx; updateStepInfo();
+  document.querySelectorAll('#trace-body tr').forEach((tr,i)=>tr.classList.toggle('active',i===idx));
+  const row=document.querySelectorAll('#trace-body tr')[idx];
+  if(row)row.scrollIntoView({block:'nearest',behavior:'smooth'});
+  document.getElementById('stack-step-num').textContent=idx+1;
+  renderStackAtStep(idx);
 }
 
 // ============================================================
-// Memory View
+// Stack Viz
 // ============================================================
-function renderMemoryAtStep(idx) {
-  const step = traceData.steps[idx];
-  if (!step || step.memory_size === 0) {
-    document.getElementById('memory-empty').style.display = 'flex';
-    document.getElementById('memory-view').innerHTML = '';
-    return;
+function renderStackAtStep(idx){
+  const container=document.getElementById('stack-viz');
+  if(!traceData||!traceData.steps[idx]){container.innerHTML='';return;}
+  const step=traceData.steps[idx];
+  const prev=idx>0?traceData.steps[idx-1].stack:[];
+  if(step.stack.length===0){container.innerHTML='<div style="color:var(--overlay);font-size:11px;text-align:center;padding:16px;">Stack is empty</div>';return;}
+  let html='';
+  for(let i=step.stack.length-1;i>=0;i--){
+    const val=step.stack[i], isNew=i>=prev.length||prev[i]!==val;
+    const pos=step.stack.length-1-i;
+    html+=`<div class="stack-item${isNew?' new':''}" title="Hex: ${val}\nDecimal: ${fullDec(val)}"><span class="stack-index">${pos}</span><span class="stack-value">${shortHex(val,22)}</span><span class="stack-decimal">${hexDec(val)}</span></div>`;
   }
-  document.getElementById('memory-empty').style.display = 'none';
-  const container = document.getElementById('memory-view');
-  container.innerHTML = `<div style="color: var(--subtext); font-size: 11px; margin-bottom: 8px;">Memory Size: ${step.memory_size} bytes</div>`;
-  // Note: we only show size since we don't have byte-level memory in trace
-  // A future enhancement could include memory snapshots
+  container.innerHTML=html;
 }
 
 // ============================================================
 // Gas Profile
 // ============================================================
-function renderGasProfile() {
-  if (!traceData || !traceData.steps) return;
-  document.getElementById('gas-empty').style.display = 'none';
-  const container = document.getElementById('gas-profile');
-
-  // Summary
-  const used = traceData.total_gas_used;
-  const limit = traceData.gas_limit;
-  const pct = ((used / limit) * 100).toFixed(1);
-
-  let html = `<div class="gas-summary">
-    <div class="gas-stat">
-      <div class="gas-stat-label">Gas Used</div>
-      <div class="gas-stat-value" style="color: var(--yellow);">${used.toLocaleString()}</div>
-    </div>
-    <div class="gas-stat">
-      <div class="gas-stat-label">Gas Limit</div>
-      <div class="gas-stat-value" style="color: var(--text);">${limit.toLocaleString()}</div>
-    </div>
-    <div class="gas-stat">
-      <div class="gas-stat-label">Efficiency</div>
-      <div class="gas-stat-value" style="color: var(--green);">${pct}%</div>
-    </div>
-    <div class="gas-stat">
-      <div class="gas-stat-label">Steps</div>
-      <div class="gas-stat-value" style="color: var(--blue);">${traceData.steps.length}</div>
-    </div>
-  </div>`;
-
-  // Per-opcode breakdown
-  const gasByOp = {};
-  traceData.steps.forEach(s => {
-    if (!gasByOp[s.opcode_name]) gasByOp[s.opcode_name] = 0;
-    gasByOp[s.opcode_name] += s.gas_cost;
+function renderGasProfile(){
+  if(!traceData||!traceData.steps)return;
+  const container=document.getElementById('gas-profile');
+  const used=traceData.total_gas_used,limit=traceData.gas_limit,pct=((used/limit)*100).toFixed(1);
+  let html=`<div class="gas-summary"><div class="gas-stat"><div class="gas-stat-label">Gas Used</div><div class="gas-stat-value" style="color:var(--yellow);">${used.toLocaleString()}</div></div><div class="gas-stat"><div class="gas-stat-label">Gas Limit</div><div class="gas-stat-value" style="color:var(--text);">${limit.toLocaleString()}</div></div><div class="gas-stat"><div class="gas-stat-label">Used %</div><div class="gas-stat-value" style="color:var(--green);">${pct}%</div></div><div class="gas-stat"><div class="gas-stat-label">Steps</div><div class="gas-stat-value" style="color:var(--blue);">${traceData.steps.length}</div></div></div>`;
+  const gasByOp={};
+  traceData.steps.forEach(s=>{gasByOp[s.opcode_name]=(gasByOp[s.opcode_name]||0)+s.gas_cost;});
+  const sorted=Object.entries(gasByOp).sort((a,b)=>b[1]-a[1]);
+  const mx=sorted.length>0?sorted[0][1]:1;
+  const colors=['var(--blue)','var(--green)','var(--yellow)','var(--peach)','var(--mauve)','var(--teal)','var(--pink)','var(--red)'];
+  sorted.forEach(([name,gas],i)=>{
+    const w=(gas/mx*100).toFixed(1),color=colors[i%colors.length];
+    html+=`<div class="gas-bar-container"><div class="gas-bar-label"><span class="name">${name}</span><span class="value">${gas}</span></div><div class="gas-bar"><div class="gas-bar-fill" style="width:${w}%;background:${color};"></div></div></div>`;
   });
-  const sorted = Object.entries(gasByOp).sort((a, b) => b[1] - a[1]);
-  const maxGas = sorted.length > 0 ? sorted[0][1] : 1;
-
-  const colors = ['var(--blue)', 'var(--green)', 'var(--yellow)', 'var(--peach)', 'var(--mauve)', 'var(--teal)', 'var(--pink)', 'var(--red)'];
-  html += '<div style="margin-top: 4px;">';
-  sorted.forEach(([name, gas], i) => {
-    const w = (gas / maxGas * 100).toFixed(1);
-    const color = colors[i % colors.length];
-    html += `<div class="gas-bar-container">
-      <div class="gas-bar-label"><span class="name">${name}</span><span class="value">${gas}</span></div>
-      <div class="gas-bar"><div class="gas-bar-fill" style="width:${w}%;background:${color};"></div></div>
-    </div>`;
-  });
-  html += '</div>';
-
-  container.innerHTML = html;
+  container.innerHTML=html;
 }
 
 // ============================================================
-// Output View
+// Output
 // ============================================================
-function renderOutput() {
-  if (!traceData) return;
-  document.getElementById('output-empty').style.display = 'none';
-  const container = document.getElementById('output-view');
+function renderOutput(){
+  if(!traceData)return;
+  const container=document.getElementById('output-view');
+  let html='<div style="font-size:11px;">';
 
-  let html = `<div style="font-size: 12px;">`;
-  html += `<div style="margin-bottom: 12px; padding: 10px; background: var(--bg); border-radius: 4px; border-left: 3px solid ${traceData.success ? 'var(--green)' : 'var(--red)'};">`;
-  html += `<strong style="color: ${traceData.success ? 'var(--green)' : 'var(--red)'};">${traceData.success ? 'SUCCESS' : 'FAILED'}</strong>`;
-  if (traceData.error_msg) html += `<span style="color: var(--red); margin-left: 8px;">${traceData.error_msg}</span>`;
-  html += `</div>`;
+  if(traceData.error_msg)html+=`<div style="margin-bottom:8px;padding:6px 8px;background:var(--bg);border-radius:4px;border-left:3px solid var(--red);"><strong style="color:var(--red);">Error:</strong> <span style="color:var(--subtext);">${traceData.error_msg}</span></div>`;
 
-  // Return data
-  html += `<div style="margin-bottom: 12px;"><strong style="color: var(--subtext);">Return Data:</strong><br>
-    <code style="color: var(--green);">${traceData.return_data || '0x'}</code></div>`;
+  html+=`<div style="margin-bottom:8px;"><strong style="color:var(--subtext);">Return Data:</strong> <code style="color:var(--green);">${traceData.return_data||'0x'}</code></div>`;
 
-  // Final stack
-  html += `<div style="margin-bottom: 12px;"><strong style="color: var(--subtext);">Final Stack:</strong><br>`;
-  if (traceData.final_stack && traceData.final_stack.length > 0) {
-    traceData.final_stack.slice().reverse().forEach((v, i) => {
-      html += `<div style="padding: 2px 0;"><span style="color: var(--overlay);">[${i}]</span> <code style="color: var(--green);">${v}</code> <span style="color: var(--subtext); font-size: 10px;">(${hexToDecimal(v)})</span></div>`;
+  if(traceData.final_stack&&traceData.final_stack.length>0){
+    html+=`<div style="margin-bottom:8px;"><strong style="color:var(--subtext);">Final Stack (${traceData.final_stack.length} items):</strong>`;
+    traceData.final_stack.slice().reverse().forEach((v,i)=>{
+      html+=`<div style="padding:1px 0;"><span style="color:var(--overlay);">[${i}]</span> <code style="color:var(--green);">${v}</code> <span style="color:var(--subtext);font-size:10px;">(${hexDec(v)})</span></div>`;
     });
-  } else {
-    html += `<span style="color: var(--overlay);">(empty)</span>`;
-  }
-  html += `</div>`;
-
-  // Storage
-  if (traceData.storage && traceData.storage.length > 0) {
-    html += `<div style="margin-bottom: 12px;"><strong style="color: var(--subtext);">Storage:</strong><br>`;
-    traceData.storage.forEach(s => {
-      html += `<div style="padding: 2px 0;"><code style="color: var(--peach);">${s.key}</code> => <code style="color: var(--green);">${s.value}</code></div>`;
-    });
-    html += `</div>`;
+    html+=`</div>`;
   }
 
-  // Logs
-  if (traceData.logs && traceData.logs.length > 0) {
-    html += `<div style="margin-bottom: 12px;"><strong style="color: var(--subtext);">Logs (${traceData.logs.length}):</strong><br>`;
-    traceData.logs.forEach((log, i) => {
-      html += `<div style="padding: 4px 0; border-bottom: 1px solid var(--surface2);">
-        <div>Log #${i}: address=${shortHex(log.address)}</div>
-        <div>Topics: ${log.topics.map(t => shortHex(t)).join(', ') || 'none'}</div>
-        <div>Data: ${shortHex(log.data, 40)}</div>
-      </div>`;
-    });
-    html += `</div>`;
+  if(traceData.storage&&traceData.storage.length>0){
+    html+=`<div style="margin-bottom:8px;"><strong style="color:var(--subtext);">Storage Changes:</strong>`;
+    traceData.storage.forEach(s=>{html+=`<div style="padding:1px 0;"><code style="color:var(--peach);">${s.key}</code> => <code style="color:var(--green);">${s.value}</code></div>`;});
+    html+=`</div>`;
   }
 
-  html += `</div>`;
-  container.innerHTML = html;
+  if(traceData.logs&&traceData.logs.length>0){
+    html+=`<div><strong style="color:var(--subtext);">Logs (${traceData.logs.length}):</strong>`;
+    traceData.logs.forEach((log,i)=>{html+=`<div style="padding:2px 0;">Log #${i}: ${shortHex(log.address)} | Topics: ${log.topics.map(t=>shortHex(t,12)).join(', ')||'none'}</div>`;});
+    html+=`</div>`;
+  }
+
+  html+='</div>';
+  container.innerHTML=html;
+
+  // Auto-expand if there's meaningful output
+  if((traceData.return_data&&traceData.return_data!=='0x')||(traceData.storage&&traceData.storage.length>0)||(traceData.logs&&traceData.logs.length>0))
+    expandSection('section-output-body');
 }
+
+// ============================================================
+// Clear
+// ============================================================
+document.getElementById('btn-clear').addEventListener('click',()=>{
+  traceData=null; currentStep=-1;
+  if(stepTimer){clearInterval(stepTimer);stepTimer=null;}
+  document.getElementById('trace-table').style.display='none';
+  document.getElementById('trace-empty').style.display='flex';
+  document.getElementById('trace-body').innerHTML='';
+  document.getElementById('stack-viz').innerHTML='<div class="empty-state" style="height:100px;font-size:11px;">Stack appears here when you run or hover a trace row</div>';
+  document.getElementById('stack-step-num').textContent='-';
+  document.getElementById('gas-profile').innerHTML='';
+  document.getElementById('output-view').innerHTML='';
+  document.getElementById('exec-summary').style.display='none';
+  document.getElementById('step-controls').style.display='none';
+  ['section-gas-body','section-output-body'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.classList.add('collapsed');
+    const hdr=document.querySelector(`[data-toggle="${id}"]`);
+    if(hdr){const a=hdr.querySelector('.collapse-arrow');a&&a.classList.remove('open');}
+  });
+  document.getElementById('bytecode-input').value='';
+  document.getElementById('disasm-body').innerHTML='<span class="disasm-placeholder">Type bytecode above to see decoded opcodes</span>';
+});
 
 // ============================================================
 // Opcode Reference
 // ============================================================
 function renderOpcodeReference(filter, search) {
-  filter = filter || 'all';
-  search = (search || '').toLowerCase();
-  const tbody = document.getElementById('ref-body');
-  tbody.innerHTML = '';
-
-  opcodeData.forEach(op => {
-    if (filter !== 'all' && op.category !== filter) return;
-    if (search && !op.name.toLowerCase().includes(search) && !op.description.toLowerCase().includes(search)) return;
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="ref-hex">0x${op.code.toString(16).padStart(2, '0')}</td>
-      <td class="ref-name">${op.name}</td>
-      <td class="ref-gas">${op.gas}</td>
-      <td>${op.stack_in}</td>
-      <td>${op.stack_out}</td>
-      <td>${op.description}</td>
-      <td><span class="ref-cat">${op.category}</span></td>
-    `;
-    tr.addEventListener('click', () => {
-      // Switch to playground and insert
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+  filter=filter||'all'; search=(search||'').toLowerCase();
+  const tbody=document.getElementById('ref-body'); tbody.innerHTML='';
+  opcodeData.forEach(op=>{
+    if(filter!=='all'&&op.category!==filter)return;
+    if(search&&!op.name.toLowerCase().includes(search)&&!op.description.toLowerCase().includes(search))return;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="ref-hex">0x${op.code.toString(16).padStart(2,'0')}</td><td class="ref-name">${op.name}</td><td class="ref-gas">${op.gas}</td><td>${op.stack_in}</td><td>${op.stack_out}</td><td>${op.description}</td><td><span class="ref-cat">${op.category}</span></td>`;
+    tr.addEventListener('click',()=>{
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.content').forEach(c=>c.classList.remove('active'));
       document.querySelector('[data-tab="playground"]').classList.add('active');
       document.getElementById('tab-playground').classList.add('active');
-      const input = document.getElementById('bytecode-input');
-      input.value += op.code.toString(16).padStart(2, '0');
-      input.focus();
+      document.getElementById('bytecode-input').value+=op.code.toString(16).padStart(2,'0');
+      triggerDisasm();
     });
     tbody.appendChild(tr);
   });
 }
-
-document.querySelectorAll('.filter-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+document.querySelectorAll('.filter-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    renderOpcodeReference(btn.dataset.cat, document.getElementById('ref-search').value);
+    renderOpcodeReference(btn.dataset.cat,document.getElementById('ref-search').value);
   });
 });
-document.getElementById('ref-search').addEventListener('input', (e) => {
-  const activeFilter = document.querySelector('.filter-btn.active');
-  renderOpcodeReference(activeFilter ? activeFilter.dataset.cat : 'all', e.target.value);
+document.getElementById('ref-search').addEventListener('input',e=>{
+  const f=document.querySelector('.filter-btn.active');
+  renderOpcodeReference(f?f.dataset.cat:'all',e.target.value);
 });
 
 // ============================================================
 // Parallel Execution
 // ============================================================
-const scenarios = {
-  independent: {
-    desc: '8 transactions between different addresses - all can run in parallel.',
-    txs: Array.from({length: 8}, (_, i) => ({
-      from: '0x' + (i + 1).toString(16).padStart(40, '0'),
-      to: '0x' + (i + 11).toString(16).padStart(40, '0'),
-      value: ((i + 1) * 100).toString(),
-      data: '',
-    })),
-  },
-  contention: {
-    desc: '6 transactions all touching the same address - must serialize.',
-    txs: Array.from({length: 6}, (_, i) => ({
-      from: '0x' + (i + 1).toString(16).padStart(40, '0'),
-      to: '0x' + 'aa'.repeat(20),
-      value: '50',
-      data: '',
-    })),
-  },
-  mixed: {
-    desc: '10 transactions - some independent, some sharing addresses.',
-    txs: [
-      { from: '0x' + '01'.repeat(20), to: '0x' + '0a'.repeat(20), value: '100', data: '' },
-      { from: '0x' + '02'.repeat(20), to: '0x' + '0b'.repeat(20), value: '200', data: '' },
-      { from: '0x' + '03'.repeat(20), to: '0x' + '0a'.repeat(20), value: '150', data: '' },
-      { from: '0x' + '04'.repeat(20), to: '0x' + '0c'.repeat(20), value: '300', data: '' },
-      { from: '0x' + '05'.repeat(20), to: '0x' + '0b'.repeat(20), value: '50', data: '' },
-      { from: '0x' + '06'.repeat(20), to: '0x' + '0d'.repeat(20), value: '400', data: '' },
-      { from: '0x' + '01'.repeat(20), to: '0x' + '0e'.repeat(20), value: '75', data: '' },
-      { from: '0x' + '07'.repeat(20), to: '0x' + '0f'.repeat(20), value: '250', data: '' },
-      { from: '0x' + '08'.repeat(20), to: '0x' + '0c'.repeat(20), value: '125', data: '' },
-      { from: '0x' + '09'.repeat(20), to: '0x' + '10'.repeat(20), value: '175', data: '' },
-    ],
-  },
+const scenarios={
+  independent:{desc:'8 transactions between different addresses - all can run in parallel.',txs:Array.from({length:8},(_,i)=>({from:'0x'+(i+1).toString(16).padStart(40,'0'),to:'0x'+(i+11).toString(16).padStart(40,'0'),value:((i+1)*100).toString()}))},
+  contention:{desc:'6 transactions all sending to the same address - must serialize.',txs:Array.from({length:6},(_,i)=>({from:'0x'+(i+1).toString(16).padStart(40,'0'),to:'0x'+'aa'.repeat(20),value:'50'}))},
+  mixed:{desc:'10 transactions - some share addresses, creating partial parallelism.',txs:[
+    {from:'0x'+'01'.repeat(20),to:'0x'+'0a'.repeat(20),value:'100'},{from:'0x'+'02'.repeat(20),to:'0x'+'0b'.repeat(20),value:'200'},
+    {from:'0x'+'03'.repeat(20),to:'0x'+'0a'.repeat(20),value:'150'},{from:'0x'+'04'.repeat(20),to:'0x'+'0c'.repeat(20),value:'300'},
+    {from:'0x'+'05'.repeat(20),to:'0x'+'0b'.repeat(20),value:'50'},{from:'0x'+'06'.repeat(20),to:'0x'+'0d'.repeat(20),value:'400'},
+    {from:'0x'+'01'.repeat(20),to:'0x'+'0e'.repeat(20),value:'75'},{from:'0x'+'07'.repeat(20),to:'0x'+'0f'.repeat(20),value:'250'},
+    {from:'0x'+'08'.repeat(20),to:'0x'+'0c'.repeat(20),value:'125'},{from:'0x'+'09'.repeat(20),to:'0x'+'10'.repeat(20),value:'175'},
+  ]},
 };
+document.getElementById('parallel-scenario').addEventListener('change',e=>{const s=scenarios[e.target.value];if(s)document.getElementById('scenario-desc').textContent=s.desc;});
+document.getElementById('btn-parallel-run').addEventListener('click',()=>{const s=scenarios[document.getElementById('parallel-scenario').value];if(s)runParallel(s.txs);});
 
-document.getElementById('parallel-scenario').addEventListener('change', (e) => {
-  const s = scenarios[e.target.value];
-  if (s) document.getElementById('scenario-desc').textContent = s.desc;
-});
-
-document.getElementById('btn-parallel-run').addEventListener('click', () => {
-  const scenarioKey = document.getElementById('parallel-scenario').value;
-  const scenario = scenarios[scenarioKey];
-  if (!scenario) return;
-
-  // Simulate dependency analysis and wave building client-side
-  // (since our batch executor needs account state that's complex to set up via API)
-  simulateParallelExecution(scenario.txs);
-});
-
-function simulateParallelExecution(txs) {
-  // Client-side dependency analysis (mirrors the Zig implementation)
-  const waves = buildWaves(txs);
-
-  // Render transaction list
-  const txList = document.getElementById('tx-list');
-  txList.innerHTML = '';
-  txs.forEach((tx, i) => {
-    const div = document.createElement('div');
-    div.style.cssText = 'padding: 4px 0; border-bottom: 1px solid var(--surface2);';
-    div.innerHTML = `<span style="color: var(--blue);">Tx${i}</span>: <span style="color: var(--subtext);">${shortHex(tx.from, 10)}</span> -> <span style="color: var(--green);">${shortHex(tx.to, 10)}</span> <span style="color: var(--yellow);">${tx.value} wei</span>`;
-    txList.appendChild(div);
-  });
-
+function runParallel(txs){
+  const waves=buildWaves(txs);
+  // Tx list
+  const txList=document.getElementById('tx-list');txList.innerHTML='';
+  txs.forEach((tx,i)=>{const d=document.createElement('div');d.style.cssText='padding:3px 0;border-bottom:1px solid var(--surface2);';d.innerHTML=`<span style="color:var(--blue);">Tx${i}</span>: ${shortHex(tx.from,10)} -> ${shortHex(tx.to,10)} <span style="color:var(--yellow);">${tx.value} wei</span>`;txList.appendChild(d);});
   // Stats
-  const maxP = Math.max(...waves.map(w => w.length));
-  const statsHtml = `
-    <div class="stat-card"><div class="stat-card-label">Transactions</div><div class="stat-card-value" style="color: var(--text);">${txs.length}</div></div>
-    <div class="stat-card"><div class="stat-card-label">Parallel Waves</div><div class="stat-card-value" style="color: var(--blue);">${waves.length}</div></div>
-    <div class="stat-card"><div class="stat-card-label">Max Parallelism</div><div class="stat-card-value" style="color: var(--green);">${maxP}</div></div>
-    <div class="stat-card"><div class="stat-card-label">Speedup</div><div class="stat-card-value" style="color: var(--peach);">${(txs.length / waves.length).toFixed(1)}x</div></div>
-  `;
-  document.getElementById('parallel-stats').innerHTML = statsHtml;
-
-  // Wave visualization
-  document.getElementById('waves-empty').style.display = 'none';
-  const waveViz = document.getElementById('wave-viz');
-  const waveColors = ['var(--blue)', 'var(--green)', 'var(--yellow)', 'var(--peach)', 'var(--mauve)', 'var(--teal)', 'var(--pink)', 'var(--red)'];
-
-  let html = '';
-  waves.forEach((wave, wi) => {
-    html += `<div class="wave-row">
-      <div class="wave-label">Wave ${wi}</div>
-      <div class="wave-bar">`;
-    wave.forEach(txIdx => {
-      const color = waveColors[wi % waveColors.length];
-      html += `<div class="tx-block" style="background: ${color}; color: var(--bg);">Tx${txIdx}</div>`;
-    });
-    html += `</div></div>`;
-  });
-
-  // Add dependency info
-  html += `<div style="margin-top: 16px; font-size: 11px; color: var(--subtext);">
-    <strong>Dependency Analysis:</strong>
-    <div style="margin-top: 4px;">`;
-
-  const deps = findDependencies(txs);
-  if (deps.length === 0) {
-    html += '<span style="color: var(--green);">No dependencies found - all transactions are independent!</span>';
-  } else {
-    deps.forEach(d => {
-      html += `<div style="padding: 2px 0;">Tx${d.a} <-> Tx${d.b}: <span style="color: var(--yellow);">${d.reason}</span></div>`;
-    });
-  }
-  html += '</div></div>';
-
-  // Sequential vs Parallel comparison bar
-  const seqTime = txs.length;
-  const parTime = waves.length;
-  html += `<div style="margin-top: 16px;">
-    <div style="font-size: 11px; color: var(--subtext); margin-bottom: 4px;">Sequential vs Parallel (relative time)</div>
-    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-      <span style="min-width: 70px; font-size: 11px; color: var(--red);">Sequential</span>
-      <div style="flex: 1; background: var(--bg); border-radius: 3px; height: 20px; overflow: hidden;">
-        <div style="width: 100%; height: 100%; background: var(--red); opacity: 0.6; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text);">${seqTime} steps</div>
-      </div>
-    </div>
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <span style="min-width: 70px; font-size: 11px; color: var(--green);">Parallel</span>
-      <div style="flex: 1; background: var(--bg); border-radius: 3px; height: 20px; overflow: hidden;">
-        <div style="width: ${(parTime / seqTime * 100).toFixed(0)}%; height: 100%; background: var(--green); opacity: 0.6; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--bg);">${parTime} waves</div>
-      </div>
-    </div>
-  </div>`;
-
-  waveViz.innerHTML = html;
+  const maxP=Math.max(...waves.map(w=>w.length));
+  document.getElementById('parallel-stats').innerHTML=`<div class="stat-card"><div class="stat-card-label">Transactions</div><div class="stat-card-value" style="color:var(--text);">${txs.length}</div></div><div class="stat-card"><div class="stat-card-label">Parallel Waves</div><div class="stat-card-value" style="color:var(--blue);">${waves.length}</div></div><div class="stat-card"><div class="stat-card-label">Max Parallelism</div><div class="stat-card-value" style="color:var(--green);">${maxP}</div></div><div class="stat-card"><div class="stat-card-label">Speedup</div><div class="stat-card-value" style="color:var(--peach);">${(txs.length/waves.length).toFixed(1)}x</div></div>`;
+  // Waves
+  document.getElementById('waves-empty').style.display='none';
+  const waveColors=['var(--blue)','var(--green)','var(--yellow)','var(--peach)','var(--mauve)','var(--teal)','var(--pink)','var(--red)'];
+  let html='';
+  waves.forEach((wave,wi)=>{html+=`<div class="wave-row"><div class="wave-label">Wave ${wi}</div><div class="wave-bar">${wave.map(ti=>`<div class="tx-block" style="background:${waveColors[wi%waveColors.length]};color:var(--bg);">Tx${ti}</div>`).join('')}</div></div>`;});
+  // Dependencies
+  const deps=findDeps(txs);
+  html+=`<div style="margin-top:12px;font-size:10px;color:var(--subtext);"><strong>Dependencies:</strong>`;
+  if(!deps.length)html+=' <span style="color:var(--green);">None! All independent.</span>';
+  else deps.forEach(d=>{html+=`<div style="padding:1px 0;">Tx${d.a} <-> Tx${d.b}: <span style="color:var(--yellow);">${d.reason}</span></div>`;});
+  html+='</div>';
+  // Comparison
+  html+=`<div style="margin-top:12px;font-size:10px;"><div style="color:var(--subtext);margin-bottom:4px;">Sequential vs Parallel:</div><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><span style="min-width:60px;color:var(--red);">Sequential</span><div style="flex:1;background:var(--bg);border-radius:3px;height:16px;overflow:hidden;"><div style="width:100%;height:100%;background:var(--red);opacity:0.5;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text);">${txs.length} steps</div></div></div><div style="display:flex;align-items:center;gap:6px;"><span style="min-width:60px;color:var(--green);">Parallel</span><div style="flex:1;background:var(--bg);border-radius:3px;height:16px;overflow:hidden;"><div style="width:${(waves.length/txs.length*100).toFixed(0)}%;height:100%;background:var(--green);opacity:0.5;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--bg);">${waves.length} waves</div></div></div></div>`;
+  document.getElementById('wave-viz').innerHTML=html;
 }
 
-function buildWaves(txs) {
-  const waves = [];
-  const remaining = txs.map((_, i) => i);
-  const usedNonces = {};
-
-  while (remaining.length > 0) {
-    const wave = [];
-    const usedAddrs = new Set();
-    const toRemove = [];
-
-    for (let i = 0; i < remaining.length; i++) {
-      const txIdx = remaining[i];
-      const tx = txs[txIdx];
-      if (usedAddrs.has(tx.from) || usedAddrs.has(tx.to)) continue;
-      // Same sender must be sequential
-      const senderKey = tx.from;
-      const expectedNonce = usedNonces[senderKey] || 0;
-      // For simplicity, allow if sender not yet in wave
-      wave.push(txIdx);
-      usedAddrs.add(tx.from);
-      usedAddrs.add(tx.to);
-      usedNonces[senderKey] = expectedNonce + 1;
-      toRemove.push(i);
+function buildWaves(txs){
+  const waves=[],remaining=txs.map((_,i)=>i),usedNonces={};
+  while(remaining.length>0){
+    const wave=[],usedAddrs=new Set(),toRemove=[];
+    for(let i=0;i<remaining.length;i++){
+      const ti=remaining[i],tx=txs[ti];
+      if(usedAddrs.has(tx.from)||usedAddrs.has(tx.to))continue;
+      wave.push(ti);usedAddrs.add(tx.from);usedAddrs.add(tx.to);toRemove.push(i);
     }
-
-    if (wave.length === 0 && remaining.length > 0) {
-      // Force remaining into one wave
-      waves.push([...remaining]);
-      break;
-    }
-
-    // Remove used indices (reverse order)
-    for (let i = toRemove.length - 1; i >= 0; i--) {
-      remaining.splice(toRemove[i], 1);
-    }
+    if(!wave.length&&remaining.length){waves.push([...remaining]);break;}
+    for(let i=toRemove.length-1;i>=0;i--)remaining.splice(toRemove[i],1);
     waves.push(wave);
   }
   return waves;
 }
-
-function findDependencies(txs) {
-  const deps = [];
-  for (let i = 0; i < txs.length; i++) {
-    for (let j = i + 1; j < txs.length; j++) {
-      const a = txs[i], b = txs[j];
-      if (a.from === b.from) deps.push({ a: i, b: j, reason: 'Same sender (nonce conflict)' });
-      else if (a.to === b.to) deps.push({ a: i, b: j, reason: 'Same recipient (write conflict)' });
-      else if (a.from === b.to || a.to === b.from) deps.push({ a: i, b: j, reason: 'Address overlap (read/write conflict)' });
-    }
+function findDeps(txs){
+  const deps=[];
+  for(let i=0;i<txs.length;i++)for(let j=i+1;j<txs.length;j++){
+    const a=txs[i],b=txs[j];
+    if(a.from===b.from)deps.push({a:i,b:j,reason:'Same sender'});
+    else if(a.to===b.to)deps.push({a:i,b:j,reason:'Same recipient'});
+    else if(a.from===b.to||a.to===b.from)deps.push({a:i,b:j,reason:'Address overlap'});
   }
   return deps;
 }
@@ -1107,6 +928,9 @@ function findDependencies(txs) {
 // ============================================================
 // Init
 // ============================================================
+setupBanner();
+setupCollapsible();
+setupLiveDisasm();
 loadExamples();
 loadOpcodes();
 </script>

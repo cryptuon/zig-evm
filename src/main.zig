@@ -179,13 +179,13 @@ pub const Account = struct {
 /// Ethereum log entry
 pub const Log = struct {
     address: [20]u8,
-    topics: std.ArrayList([32]u8),
+    topics: std.array_list.Managed([32]u8),
     data: []u8,
 
     pub fn init(allocator: Allocator, address: [20]u8) Log {
         return Log{
             .address = address,
-            .topics = std.ArrayList([32]u8).init(allocator),
+            .topics = std.array_list.Managed([32]u8).init(allocator),
             .data = &[_]u8{},
         };
     }
@@ -250,7 +250,7 @@ pub const EVM = struct {
     block_hashes: std.AutoHashMap(u64, [32]u8),
 
     // Logs generated during execution
-    logs: std.ArrayList(Log),
+    logs: std.array_list.Managed(Log),
 
     // Call stack for nested calls
     call_stack: CallStack,
@@ -288,7 +288,7 @@ pub const EVM = struct {
             .execution_reverted = false,
             .coinbase = [_]u8{0} ** 20,
             .block_hashes = std.AutoHashMap(u64, [32]u8).init(allocator),
-            .logs = std.ArrayList(Log).init(allocator),
+            .logs = std.array_list.Managed(Log).init(allocator),
             .call_stack = CallStack.init(allocator),
         };
         try evm.loadOpcodes();

@@ -63,6 +63,24 @@ pub const Memory = struct {
         self.data.items[offset] = value;
     }
 
+    pub fn ensureCapacity(self: *Memory, allocator: std.mem.Allocator, min_size: usize) !void {
+        if (min_size > self.data.items.len) {
+            const old_len = self.data.items.len;
+            try self.data.resize(allocator, min_size);
+            // Initialize new memory to zero
+            for (self.data.items[old_len..]) |*byte| {
+                byte.* = 0;
+            }
+        }
+    }
+
+    pub fn loadByte(self: *Memory, offset: usize) u8 {
+        if (offset < self.data.items.len) {
+            return self.data.items[offset];
+        }
+        return 0;
+    }
+
     pub fn size(self: *Memory) usize {
         return self.data.items.len;
     }

@@ -106,7 +106,7 @@ pub const CallFrame = struct {
 
 /// Call stack managing nested call frames
 pub const CallStack = struct {
-    frames: std.ArrayList(CallFrame),
+    frames: std.array_list.Managed(CallFrame),
     max_depth: u16,
     allocator: Allocator,
 
@@ -114,7 +114,7 @@ pub const CallStack = struct {
 
     pub fn init(allocator: Allocator) CallStack {
         return CallStack{
-            .frames = std.ArrayList(CallFrame).init(allocator),
+            .frames = std.array_list.Managed(CallFrame).init(allocator),
             .max_depth = MAX_CALL_DEPTH,
             .allocator = allocator,
         };
@@ -258,7 +258,7 @@ test "static context propagation" {
     defer stack.deinit();
 
     // First frame is static
-    var static_frame = CallFrame.init(
+    const static_frame = CallFrame.init(
         [_]u8{0} ** 20,
         [_]u8{0} ** 20,
         [_]u8{0} ** 20,
@@ -275,7 +275,7 @@ test "static context propagation" {
     try stack.push(static_frame);
 
     // Nested frame is not explicitly static, but inherits from parent
-    var nested_frame = CallFrame.init(
+    const nested_frame = CallFrame.init(
         [_]u8{0} ** 20,
         [_]u8{0} ** 20,
         [_]u8{0} ** 20,

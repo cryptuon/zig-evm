@@ -1,0 +1,38 @@
+---
+import Head from '../components/Head.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/global.css';
+
+export interface Props {
+  title: string;
+  description: string;
+  image?: string;
+  type?: 'website' | 'article';
+  publishedTime?: string;
+  modifiedTime?: string;
+  author?: string;
+  tags?: string[];
+  keywords?: string[];
+  noindex?: boolean;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  breadcrumbs?: { name: string; url?: string }[];
+  fullWidth?: boolean;
+}
+
+const props = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <Head {...props} />
+  </head>
+  <body>
+    <Header />
+    <main class={props.fullWidth ? '' : 'mx-auto max-w-7xl px-6'}>
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

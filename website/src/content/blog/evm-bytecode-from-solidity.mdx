@@ -1,0 +1,402 @@
+---
+title: "EVM Bytecode: From Solidity to Opcodes"
+description: "Learn how Solidity compiles to EVM bytecode, understand bytecode structure, read common opcode patterns, and trace execution with the Zig EVM playground."
+pubDate: 2026-04-12
+author: "Zig EVM Team"
+tags: [EVM, bytecode, Solidity, compilation, opcodes]
+keywords: [evm bytecode, solidity to bytecode, evm opcodes, bytecode analysis, solidity compilation, evm disassembly, smart contract bytecode]
+faq:
+  - question: "What is EVM bytecode?"
+    answer: "EVM bytecode is the low-level machine code that the Ethereum Virtual Machine executes. It consists of a sequence of single-byte opcodes (like PUSH1, ADD, SSTORE) that manipulate a stack-based virtual machine. Solidity and Vyper compile down to this bytecode before deployment."
+  - question: "How do I read EVM bytecode?"
+    answer: "EVM bytecode is read sequentially. Each byte is either an opcode (like 0x01 for ADD) or data following a PUSH instruction. Tools like the Zig EVM playground, Etherscan's disassembler, and Dedaub can convert raw bytecode into human-readable opcode sequences."
+  - question: "What is the difference between creation bytecode and runtime bytecode?"
+    answer: "Creation bytecode runs once during contract deployment and includes the constructor logic. It returns the runtime bytecode, which is stored on-chain and executes for all subsequent calls. The creation bytecode is a wrapper that sets up and deploys the runtime code."
+  - question: "Can you decompile EVM bytecode back to Solidity?"
+    answer: "You can partially decompile bytecode. Tools like Dedaub, Heimdall, and the Panoramix decompiler can recover function signatures, control flow, and approximate Solidity-like code. However, variable names, comments, and some type information are lost during compilation."
+  - question: "Why is understanding EVM bytecode important?"
+    answer: "Understanding bytecode helps with gas optimization, security auditing, debugging failed transactions, verifying compiler output, and building developer tools. Many exploits target bytecode-level behaviors that are invisible in Solidity source code."
+draft: false
+---
+
+**TL;DR:** Every Solidity contract becomes a sequence of EVM bytecode instructions before it runs on Ethereum. Understanding this compilation process -- from high-level Solidity to low-level opcodes -- is essential for gas optimization, security auditing, and debugging. This guide walks through the complete journey with real bytecode examples you can trace in the [Zig EVM Playground](/zig-evm/playground/).
+
+## What Is EVM Bytecode?
+
+EVM bytecode is the machine language of Ethereum. Just as x86 assembly is what your CPU actually executes, EVM bytecode is what Ethereum nodes actually run when processing smart contract transactions.
+
+**EVM bytecode is a Turing-complete instruction set consisting of approximately 144 single-byte opcodes that operate on a stack-based virtual machine with 256-bit word size.** Each opcode performs one atomic operation: push a value, add two numbers, read from storage, or jump to another instruction.
+
+Here is what a simple addition looks like at the bytecode level:
+
+```bash
+# Solidity: uint256 result = 5 + 3;
+# Bytecode: 0x6005600301
+# Disassembled:
+PUSH1 0x05    # Push 5 onto the stack
+PUSH1 0x03    # Push 3 onto the stack
+ADD           # Pop both, push 8
+```
+
+Every smart contract you have ever interacted with -- from Uniswap to Aave to simple ERC-20 tokens -- executes as a sequence of these primitive instructions.
+
+## How Solidity Compiles to Bytecode
+
+The Solidity compiler (`solc`) transforms human-readable source code into deployable bytecode through several stages.
+
+### Compilation Pipeline
+
+```
+Solidity Source
+    |
+    v
+Parser (AST)
+    |
+    v
+Type Checker
+    |
+    v
+IR Generator (Yul)
+    |
+    v
+Optimizer (optional)
+    |
+    v
+EVM Assembly
+    |
+    v
+Bytecode + ABI
+```
+
+The intermediate Yul representation is where most optimizations happen. You can inspect Yul output with:
+
+```bash
+# Generate Yul intermediate representation
+solc --ir MyContract.sol
+
+# Generate optimized Yul
+solc --optimize --ir-optimized MyContract.sol
+
+# Generate full bytecode and ABI
+solc --bin --abi MyContract.sol
+```
+
+### A Complete Example
+
+Consider this minimal Solidity contract:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract Counter {
+    uint256 public count;
+
+    function increment() external {
+        count += 1;
+    }
+}
+```
+
+Compiling this produces two distinct bytecode segments: creation code and runtime code.
+
+## Creation Bytecode vs. Runtime Bytecode
+
+This distinction is one of the most misunderstood aspects of EVM bytecode.
+
+### Creation Bytecode (Constructor)
+
+Creation bytecode executes exactly once -- during contract deployment. Its job is to:
+
+1. Run the constructor logic (initialize state variables)
+2. Return the runtime bytecode that will be stored on-chain
+
+```bash
+# Simplified creation bytecode structure:
+# [constructor logic] [CODECOPY runtime to memory] [RETURN runtime]
+
+PUSH1 0x00       # Constructor: count starts at 0 (default)
+PUSH1 0x00       # Storage slot 0
+SSTORE           # Store initial value
+
+# Copy runtime code to memory and return it
+PUSH1 <runtime_length>
+PUSH1 <runtime_offset>
+PUSH1 0x00
+CODECOPY         # Copy runtime bytecode to memory
+PUSH1 <runtime_length>
+PUSH1 0x00
+RETURN           # Return runtime bytecode for on-chain storage
+```
+
+### Runtime Bytecode
+
+Runtime bytecode is what lives on-chain at the contract's address. Every subsequent call to the contract executes this bytecode. It contains the function dispatcher, all function bodies, and metadata.
+
+| Property | Creation Bytecode | Runtime Bytecode |
+|----------|-------------------|------------------|
+| Executes | Once, during deployment | On every call |
+| Stored on-chain | No (transaction input data) | Yes (at contract address) |
+| Contains constructor | Yes | No |
+| Contains functions | No (only setup) | Yes (all external/public) |
+| Typical size | Larger (includes runtime) | Smaller |
+
+### Verifying the Distinction
+
+You can see both bytecodes using solc:
+
+```bash
+# Creation bytecode (includes constructor + runtime)
+solc --bin Counter.sol
+
+# Runtime bytecode only (what gets stored on-chain)
+solc --bin-runtime Counter.sol
+```
+
+## Reading Bytecode: The Function Dispatcher
+
+The first thing runtime bytecode does is determine which function was called. This is the function dispatcher -- it reads the first 4 bytes of calldata (the function selector) and jumps to the corresponding function body.
+
+### How Function Selectors Work
+
+A function selector is the first 4 bytes of the keccak256 hash of the function signature:
+
+```bash
+# keccak256("increment()") = 0xd09de08a...
+# Selector: 0xd09de08a (first 4 bytes)
+
+# keccak256("count()") = 0x06661abd...
+# Selector: 0x06661abd
+```
+
+### Dispatcher Bytecode Pattern
+
+```bash
+# Load function selector from calldata
+PUSH1 0x00
+CALLDATALOAD     # Load 32 bytes from calldata offset 0
+PUSH1 0xe0
+SHR              # Shift right 224 bits to get 4-byte selector
+
+# Compare against known selectors
+DUP1
+PUSH4 0x06661abd # count() selector
+EQ
+PUSH2 0x0040     # Jump destination for count()
+JUMPI            # Jump if selector matches
+
+DUP1
+PUSH4 0xd09de08a # increment() selector
+EQ
+PUSH2 0x0060     # Jump destination for increment()
+JUMPI            # Jump if selector matches
+
+# No match: revert
+PUSH1 0x00
+DUP1
+REVERT
+```
+
+This pattern repeats for every external and public function in the contract. Contracts with many functions use binary search or lookup tables for efficiency.
+
+## Common Bytecode Patterns
+
+Understanding recurring patterns helps you read bytecode quickly.
+
+### Pattern 1: Storage Read (Getter)
+
+```bash
+# Solidity: return count;  (storage slot 0)
+PUSH1 0x00       # Storage slot
+SLOAD            # Load value from storage
+# Value is now on stack, ready to be returned
+```
+
+### Pattern 2: Storage Write (Setter)
+
+```bash
+# Solidity: count = newValue;
+# Assume newValue is already on stack
+PUSH1 0x00       # Storage slot
+SSTORE           # Store value to storage
+```
+
+### Pattern 3: Arithmetic with Overflow Check
+
+Since Solidity 0.8.0, arithmetic operations include overflow protection:
+
+```bash
+# Solidity: count += 1; (with overflow check)
+PUSH1 0x00
+SLOAD            # Load current count
+PUSH1 0x01
+ADD              # Add 1
+
+# Overflow check (Solidity 0.8+ pattern)
+DUP1             # Duplicate result
+PUSH1 0x01       # Original increment value
+DUP1
+PUSH3 0x00XXXX  # Revert destination
+JUMPI            # Revert if overflow detected
+```
+
+### Pattern 4: Memory ABI Encoding for Return
+
+```bash
+# Return a uint256 value
+PUSH1 0x20       # 32 bytes (one word)
+MSTORE           # Store value in memory at offset 0x20
+PUSH1 0x20       # Return data length
+PUSH1 0x20       # Return data offset in memory
+RETURN           # Return 32 bytes from memory
+```
+
+### Pattern 5: Require/Revert
+
+```bash
+# Solidity: require(msg.sender == owner, "Not owner");
+CALLER           # Push msg.sender
+PUSH20 <owner_address>
+EQ               # Compare
+PUSH2 <continue_offset>
+JUMPI            # Jump over revert if equal
+
+# Revert with error message
+PUSH1 0x00
+DUP1
+REVERT           # Revert with no data (or with encoded error)
+```
+
+## Tracing Bytecode Execution
+
+The best way to learn bytecode is to execute it step by step. The [Zig EVM Playground](/zig-evm/playground/) provides an interactive environment for exactly this.
+
+### Step-by-Step Trace Example
+
+Let us trace the bytecode `0x6005600301` (compute 5 + 3):
+
+| Step | PC | Opcode | Stack (top first) | Gas Used |
+|------|-----|--------|-------------------|----------|
+| 1 | 0 | PUSH1 0x05 | [5] | 3 |
+| 2 | 2 | PUSH1 0x03 | [3, 5] | 6 |
+| 3 | 4 | ADD | [8] | 9 |
+
+Each step shows the program counter (PC), the current opcode, the stack state, and cumulative gas usage. This is the execution model that the Zig EVM implements:
+
+```zig
+// The Zig EVM main execution loop
+pub fn run(self: *EVM) !void {
+    while (self.pc < self.code.len) {
+        const opcode = self.code[self.pc];
+        self.pc += 1;
+
+        // Deduct gas
+        const cost = getGasCost(opcode);
+        if (self.gas_remaining < cost) return error.OutOfGas;
+        self.gas_remaining -= cost;
+
+        // Dispatch to opcode handler
+        const handler = self.opcodes.get(opcode) orelse return error.InvalidOpcode;
+        try handler.execute(self);
+    }
+}
+```
+
+You can run this yourself:
+
+```bash
+# Clone and run the Zig EVM
+git clone https://github.com/cryptuon/zig-evm.git
+cd zig-evm
+zig build run
+```
+
+## Bytecode Optimization Techniques
+
+Understanding bytecode helps you write more gas-efficient Solidity.
+
+### Technique 1: Short-Circuit Evaluation
+
+The compiler generates conditional jumps for `&&` and `||` operators. If the first condition of `&&` is false, the second is never evaluated -- saving gas on expensive checks.
+
+### Technique 2: Storage Packing
+
+Two `uint128` variables in the same slot cost one `SLOAD` (2,100 gas) instead of two. At the bytecode level, you will see `SHR` and `AND` masking to extract packed values:
+
+```bash
+# Reading a packed uint128 from the upper half of a storage slot
+PUSH1 0x00
+SLOAD            # Load full 256-bit slot
+PUSH1 0x80       # 128 bits
+SHR              # Shift right to extract upper uint128
+```
+
+### Technique 3: Constants vs. Immutables vs. Storage
+
+| Declaration | Bytecode Representation | Gas to Read |
+|-------------|------------------------|-------------|
+| `constant` | Inlined as PUSH instruction | 3 (just PUSH) |
+| `immutable` | Stored in bytecode, loaded with CODECOPY | ~100 |
+| State variable | Stored in storage, loaded with SLOAD | 2,100 (cold) / 100 (warm) |
+
+Constants are the cheapest because they become literal PUSH instructions in the bytecode -- no storage or memory access needed.
+
+## Decompilation: From Bytecode Back to Source
+
+Sometimes you need to understand a contract that has no verified source code. Decompilation tools reconstruct approximate source code from raw bytecode.
+
+### Decompilation Process
+
+1. **Disassembly**: Convert raw hex to opcode mnemonics
+2. **Control flow recovery**: Identify JUMP/JUMPI targets to reconstruct if/else and loops
+3. **Function boundary detection**: Find the dispatcher and map selectors to code regions
+4. **Type inference**: Analyze operations to infer variable types
+5. **Source reconstruction**: Generate Solidity-like pseudocode
+
+### Tools for Bytecode Analysis
+
+| Tool | Type | Best For |
+|------|------|----------|
+| Zig EVM Playground | Step debugger | Learning opcode execution |
+| Dedaub | Online decompiler | Full contract decompilation |
+| Heimdall | CLI decompiler | Automated analysis pipelines |
+| Etherscan | Disassembler | Quick opcode listing |
+| EVM Codes | Reference | Opcode documentation |
+
+### Limitations of Decompilation
+
+Decompilation cannot recover:
+- Variable names (replaced with `var_0`, `var_1`, etc.)
+- Comments and documentation
+- Original code organization and imports
+- Some complex type information
+- Compiler-specific optimizations may produce misleading patterns
+
+## Metadata and Swarm Hash
+
+Solidity appends metadata to the end of runtime bytecode. This metadata contains a CBOR-encoded hash that points to the source code and compiler settings:
+
+```bash
+# Last bytes of compiled bytecode typically look like:
+# a264697066735822 <32-byte IPFS hash> 6473 <solc version>
+# This is the metadata hash -- not executable code
+```
+
+This metadata is why two compilations of identical Solidity code can produce different bytecode -- the metadata includes the source file path, which may differ between machines.
+
+## Key Takeaways
+
+- **Solidity compilation produces two distinct bytecode segments**: creation code (runs once during deployment) and runtime code (stored on-chain, runs on every call).
+- **The function dispatcher is the first executable pattern** in runtime bytecode. It maps 4-byte selectors to function implementations using conditional jumps.
+- **Storage operations dominate gas costs.** A single `SLOAD` costs 2,100 gas (cold) compared to 3 gas for `ADD`. Bytecode-level optimization focuses on minimizing storage access.
+- **Constants compile to inline PUSH instructions**, making them effectively free to read. Use `constant` and `immutable` wherever possible.
+- **Decompilation is possible but lossy.** Variable names, comments, and some type information cannot be recovered from bytecode alone.
+- **Step-through execution is the most effective learning method.** Use the [Zig EVM Playground](/zig-evm/playground/) or the [Zig EVM CLI](https://github.com/cryptuon/zig-evm) to trace bytecode instruction by instruction.
+
+## Further Resources
+
+- [Zig EVM source code](https://github.com/cryptuon/zig-evm) -- A complete EVM implementation in Zig with 96 opcodes
+- [Zig EVM Playground](/zig-evm/playground/) -- Interactive bytecode execution in your browser
+- [Ethereum Yellow Paper](https://ethereum.github.io/yellowpaper/paper.pdf) -- Formal specification of the EVM
+- [EVM Codes](https://www.evm.codes/) -- Interactive opcode reference with gas costs
+- [Solidity Documentation](https://docs.soliditylang.org/) -- Official compiler documentation

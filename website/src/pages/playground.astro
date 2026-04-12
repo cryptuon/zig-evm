@@ -1,0 +1,42 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PlaygroundEmbed from '../components/PlaygroundEmbed.astro';
+
+const playgroundSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'Zig EVM Playground',
+  description: 'Interactive EVM bytecode editor and debugger with real-time disassembly, stack visualization, and execution tracing',
+  applicationCategory: 'DeveloperApplication',
+  operatingSystem: 'Web Browser',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  featureList: [
+    'Bytecode editor',
+    'Real-time disassembler',
+    'Stack visualization',
+    'Memory inspector',
+    'Execution tracing',
+    'Example code library',
+  ],
+};
+
+const breadcrumbs = [
+  { name: 'Home', url: '/zig-evm/' },
+  { name: 'Playground' },
+];
+---
+
+<BaseLayout
+  title="Interactive EVM Playground"
+  description="Write, debug, and trace EVM bytecode in your browser. Real-time disassembly, stack visualization, memory inspection, and pre-built examples."
+  jsonLd={playgroundSchema}
+  breadcrumbs={breadcrumbs}
+  keywords={['EVM playground', 'bytecode editor', 'EVM debugger', 'Ethereum bytecode', 'opcode debugger']}
+  fullWidth={true}
+>
+  <div class="px-6 py-8 max-w-7xl mx-auto">
+    <h1 class="text-3xl font-bold text-ctp-text mb-2">EVM Playground</h1>
+    <p class="text-ctp-subtext0 mb-6">Interactive bytecode editor with real-time disassembly, stack visualization, and execution tracing.</p>
+    <PlaygroundEmbed height="calc(100vh - 250px)" />
+  </div>
+</BaseLayout>

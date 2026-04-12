@@ -1,0 +1,412 @@
+---
+title: "Understanding EVM Gas: A Developer's Complete Guide"
+description: "Master EVM gas costs, gas limits, EIP-1559 fee mechanics, per-opcode pricing, and optimization techniques. Practical guide for smart contract developers."
+pubDate: 2026-04-12
+author: "Zig EVM Team"
+tags: [EVM, gas, Ethereum, optimization, smart-contracts]
+keywords: [evm gas, ethereum gas, gas optimization, gas costs, eip-1559, opcode gas cost, smart contract gas, gas limit, gas price]
+faq:
+  - question: "What is gas in Ethereum?"
+    answer: "Gas is the unit that measures the computational effort required to execute operations on Ethereum. Every opcode, storage access, and transaction has a gas cost. Users pay gas fees in ETH to compensate validators for the resources consumed. Gas ensures that the network cannot be overwhelmed by expensive computations."
+  - question: "Why does SSTORE cost so much gas?"
+    answer: "SSTORE (storage write) costs 5,000 to 20,000 gas because it permanently modifies blockchain state. Every full node must store this data indefinitely, and the storage trie must be updated and re-hashed. The high cost reflects the long-term burden on the network, not just the immediate computation."
+  - question: "What is the difference between gas limit and gas price?"
+    answer: "The gas limit is the maximum amount of gas a transaction is allowed to consume. The gas price (or max fee per gas in EIP-1559) is the amount of ETH the sender is willing to pay per unit of gas. Total cost = gas_used * effective_gas_price. If execution exceeds the gas limit, the transaction reverts."
+  - question: "How does EIP-1559 change gas pricing?"
+    answer: "EIP-1559 replaced the simple auction model with a base fee that adjusts algorithmically based on network demand, plus an optional priority fee (tip) to incentivize validators. The base fee is burned, reducing ETH supply. Users set a max fee per gas, and any difference between the max fee and actual cost is refunded."
+  - question: "How can I reduce gas costs in my smart contracts?"
+    answer: "Key strategies include: minimize storage writes (SSTORE), use mappings instead of arrays for lookups, pack multiple values into single storage slots, use calldata instead of memory for read-only function inputs, short-circuit conditionals to avoid unnecessary computation, and batch operations to amortize fixed costs."
+draft: false
+---
+
+**TL;DR:** Gas is Ethereum's metering system that prices every computational step in the EVM. Each opcode has a fixed gas cost -- from 3 gas for ADD to 20,000 gas for a cold SSTORE. EIP-1559 introduced a base fee that adjusts with demand plus an optional priority tip. Understanding gas costs at the opcode level is the foundation of smart contract optimization. This guide covers how gas works, what each operation costs, how the fee market functions, and practical techniques to reduce gas consumption in your contracts.
+
+## What Gas Is and Why It Exists
+
+Gas is the fundamental resource metering mechanism of the Ethereum Virtual Machine. **Every operation the EVM executes -- every addition, every memory read, every storage write -- consumes a measured amount of gas.** The sender of a transaction pays for this gas in ETH.
+
+Gas exists to solve three critical problems:
+
+1. **Halting problem:** The EVM is Turing-complete (in principle). Without gas, a contract containing an infinite loop would run forever, halting the network. Gas guarantees that every execution terminates: when gas runs out, execution stops.
+
+2. **Resource pricing:** Validators (formerly miners) expend real computational resources -- CPU cycles, memory, disk I/O, bandwidth -- to process transactions. Gas converts these abstract costs into a concrete price that compensates validators fairly.
+
+3. **Spam prevention:** Without a cost for computation, an attacker could flood the network with expensive operations at zero cost. Gas makes attacks economically prohibitive.
+
+## Gas Costs by Opcode Category
+
+The EVM assigns gas costs to opcodes based on the computational resources they consume. The Yellow Paper and subsequent EIPs define these costs precisely.
+
+### Tier 0: Zero Cost
+
+| Opcode | Gas | Notes |
+|--------|-----|-------|
+| STOP | 0 | Halts execution |
+| RETURN | 0 | Returns data (memory cost separate) |
+| REVERT | 0 | Reverts with data (memory cost separate) |
+
+These opcodes are free because they terminate execution -- no further computation occurs.
+
+### Tier 1: Base Operations (2-3 Gas)
+
+| Opcode | Gas | Category |
+|--------|-----|----------|
+| ADD, SUB | 3 | Arithmetic |
+| LT, GT, EQ, ISZERO | 3 | Comparison |
+| AND, OR, XOR, NOT | 3 | Bitwise |
+| PUSH1-32 | 3 | Stack |
+| DUP1-16 | 3 | Stack |
+| SWAP1-16 | 3 | Stack |
+| POP | 2 | Stack |
+| CALLER, CALLVALUE | 2 | Environment |
+| TIMESTAMP, NUMBER | 2 | Block info |
+| PC, MSIZE | 2 | Program state |
+
+These are the cheapest operations because they involve only stack or register manipulation with no external data access.
+
+### Tier 2: Moderate Operations (5-10 Gas)
+
+| Opcode | Gas | Category |
+|--------|-----|----------|
+| MUL, DIV, MOD | 5 | Arithmetic |
+| SDIV, SMOD | 5 | Signed arithmetic |
+| SIGNEXTEND | 5 | Arithmetic |
+| ADDMOD, MULMOD | 8 | Modular arithmetic |
+| JUMP | 8 | Flow control |
+| JUMPI | 10 | Flow control |
+
+Multiplication and division cost more than addition because they are computationally more expensive, even on modern hardware.
+
+### Tier 3: Memory Operations (3 + Expansion Cost)
+
+Memory opcodes have a base cost of 3 gas plus an **expansion cost** that grows quadratically:
+
+```
+memory_cost(word_count) = 3 * word_count + floor(word_count^2 / 512)
+```
+
+The expansion cost is calculated as the difference between the new memory cost and the previous memory cost. Here is what that looks like in practice:
+
+| Memory Used | Word Count | Total Memory Cost | Marginal Cost |
+|-------------|-----------|-------------------|---------------|
+| 32 bytes | 1 | 3 | 3 |
+| 256 bytes | 8 | 24 | 21 |
+| 1 KB | 32 | 98 | 74 |
+| 4 KB | 128 | 416 | 318 |
+| 32 KB | 1,024 | 5,120 | 4,704 |
+| 1 MB | 32,768 | 2,195,456 | -- |
+
+The quadratic term makes large memory allocations prohibitively expensive. This is by design: it prevents contracts from consuming unbounded amounts of memory on validator nodes.
+
+```zig
+// Zig EVM memory cost calculation
+pub fn calculateMemoryCost(size_bytes: u64) u64 {
+    if (size_bytes == 0) return 0;
+    const words = (size_bytes + 31) / 32;
+    return 3 * words + (words * words) / 512;
+}
+
+// Expansion cost = new_cost - old_cost
+pub fn expansionCost(old_size: u64, new_size: u64) u64 {
+    if (new_size <= old_size) return 0;
+    return calculateMemoryCost(new_size) - calculateMemoryCost(old_size);
+}
+```
+
+### Tier 4: Storage Operations (100-20,000 Gas)
+
+Storage is the most expensive category because it modifies persistent blockchain state.
+
+| Operation | Gas Cost | Condition |
+|-----------|----------|-----------|
+| SLOAD (warm) | 100 | Slot already accessed this tx |
+| SLOAD (cold) | 2,100 | First access to slot in tx |
+| SSTORE: zero to non-zero | 20,000 | Creating new storage entry |
+| SSTORE: non-zero to non-zero | 5,000 | Modifying existing entry |
+| SSTORE: non-zero to zero | 5,000 | Clearing entry (+ 4,800 refund) |
+
+**A single SSTORE writing a new value costs 20,000 gas -- equivalent to more than 6,600 ADD operations.** This ratio reflects the true cost difference: an ADD touches only the stack in memory, while an SSTORE permanently changes the global state trie that every node must store.
+
+### Tier 5: External Operations (Variable)
+
+| Operation | Base Gas | Notes |
+|-----------|----------|-------|
+| BALANCE (cold) | 2,600 | Reading another account's balance |
+| BALANCE (warm) | 100 | Already accessed this tx |
+| EXTCODESIZE (cold) | 2,600 | Reading another contract's code size |
+| CALL | 100 + value + memory | Plus 2,600 if cold address |
+| CREATE | 32,000 | Plus code deposit cost |
+| CREATE2 | 32,000 | Plus hashing cost |
+| SELFDESTRUCT | 5,000+ | Plus 25,000 if sending to new account |
+| LOG0-4 | 375 + 8*bytes + topics | Event emission |
+| SHA3/KECCAK256 | 30 + 6*words | Hashing |
+
+## Gas Limit vs. Gas Price
+
+These two concepts are frequently confused:
+
+**Gas Limit** is the maximum number of gas units a transaction may consume. If execution requires more gas than the limit, the transaction reverts and all state changes are rolled back -- but the sender still pays for the gas consumed. Setting the gas limit too low causes failures; setting it too high merely reserves more ETH upfront (the unused portion is refunded).
+
+**Gas Price** (pre-EIP-1559) or **Max Fee Per Gas** (post-EIP-1559) is the price in wei that the sender pays per unit of gas.
+
+```
+Total cost in ETH = gas_used * effective_gas_price / 10^18
+```
+
+Example: a simple token transfer using 65,000 gas at 20 gwei (20 * 10^9 wei):
+```
+65,000 * 20,000,000,000 = 1,300,000,000,000,000 wei = 0.0013 ETH
+```
+
+## EIP-1559: The Modern Fee Market
+
+Before EIP-1559 (August 2021), Ethereum used a first-price auction: users bid gas prices, and validators selected the highest-paying transactions. This was unpredictable -- gas prices could spike 10x within minutes.
+
+EIP-1559 replaced this with a more predictable system:
+
+### Base Fee
+
+The **base fee** is set algorithmically by the protocol. It adjusts up or down by a maximum of 12.5% per block based on how full the previous block was relative to a target (50% of the gas limit).
+
+- Block more than 50% full: base fee increases.
+- Block less than 50% full: base fee decreases.
+- Block exactly 50% full: base fee unchanged.
+
+**The base fee is burned** (destroyed), not paid to validators. This makes ETH potentially deflationary.
+
+### Priority Fee (Tip)
+
+The **priority fee** (or tip) is an optional additional payment that goes directly to the validator. It incentivizes validators to include your transaction. During periods of low demand, a priority fee of 1-2 gwei is typical. During congestion, higher tips are needed.
+
+### Max Fee Per Gas
+
+Users specify a **max fee per gas** -- the absolute maximum they are willing to pay. The actual cost is:
+
+```
+effective_gas_price = min(max_fee_per_gas, base_fee + max_priority_fee)
+refund = (max_fee_per_gas - effective_gas_price) * gas_used
+```
+
+```solidity
+// In a transaction:
+// maxFeePerGas: 30 gwei
+// maxPriorityFeePerGas: 2 gwei
+// Current base fee: 15 gwei
+//
+// Effective price: min(30, 15 + 2) = 17 gwei
+// Validator receives: 2 gwei * gas_used
+// Burned: 15 gwei * gas_used
+// Refunded: (30 - 17) * gas_used = 13 gwei * gas_used
+```
+
+## How Zig EVM Meters Gas
+
+The [Zig EVM project](https://github.com/cryptuon/zig-evm) implements gas metering that closely follows the Ethereum specification. Gas is checked and deducted before each opcode executes:
+
+```zig
+// Gas metering in the Zig EVM execution loop
+pub fn execute(self: *EVM) !void {
+    while (self.pc < self.bytecode.len) {
+        const opcode = self.bytecode[self.pc];
+
+        // Look up gas cost for this opcode
+        const gas_cost = getGasCost(opcode);
+
+        // Check if enough gas remains
+        if (self.gas_remaining < gas_cost) {
+            return error.OutOfGas;
+        }
+
+        // Deduct gas before execution
+        self.gas_remaining -= gas_cost;
+
+        // Dispatch to opcode implementation
+        const impl = self.opcodes.get(opcode) orelse return error.InvalidOpcode;
+        try impl.execute(self);
+
+        self.pc += 1;
+    }
+}
+```
+
+This pre-deduction model is important: if an opcode fails, the gas it would have consumed is already deducted. This matches Ethereum's behavior where a reverted transaction still costs gas.
+
+You can observe gas consumption in real time using the [Zig EVM Playground](/zig-evm/playground/), which displays the gas cost of each instruction as it executes.
+
+## Gas Optimization Techniques
+
+### 1. Minimize Storage Writes
+
+Storage writes dominate gas costs in most contracts. Every optimization effort should start here.
+
+```solidity
+// BAD: Multiple storage writes
+function updateThreeValues(uint a, uint b, uint c) external {
+    value1 = a;  // 5,000-20,000 gas
+    value2 = b;  // 5,000-20,000 gas
+    value3 = c;  // 5,000-20,000 gas
+}
+
+// BETTER: Pack into a single slot if values fit
+// Three uint80 values fit into one 256-bit slot
+function updatePacked(uint80 a, uint80 b, uint80 c) external {
+    packedValues = uint256(a) | (uint256(b) << 80) | (uint256(c) << 160);
+    // Single SSTORE: 5,000-20,000 gas total
+}
+```
+
+### 2. Use Storage Packing
+
+Solidity stores variables in 32-byte slots. Variables smaller than 32 bytes that are declared consecutively are packed into the same slot.
+
+```solidity
+// BAD: 3 storage slots (3 * SLOAD to read all)
+contract Unpacked {
+    uint256 a;  // slot 0
+    uint8 b;    // slot 1
+    uint256 c;  // slot 2
+}
+
+// GOOD: 2 storage slots
+contract Packed {
+    uint256 a;  // slot 0
+    uint256 c;  // slot 1
+    uint8 b;    // slot 1 (packed with c if c were smaller,
+                //         but here it gets its own slot)
+}
+
+// BEST: 2 storage slots with actual packing
+contract WellPacked {
+    uint256 a;  // slot 0
+    uint8 b;    // slot 1
+    uint8 c;    // slot 1 (packed with b)
+    // 30 bytes remaining in slot 1
+}
+```
+
+### 3. Use `calldata` Instead of `memory` for Read-Only Inputs
+
+```solidity
+// More expensive: copies data to memory
+function process(uint[] memory data) external { ... }
+
+// Cheaper: reads directly from transaction calldata
+function process(uint[] calldata data) external view { ... }
+```
+
+### 4. Short-Circuit Expensive Operations
+
+```solidity
+// Check the cheap condition first
+function validate(address user, bytes32 proof) external view {
+    require(user != address(0), "zero address");     // 3 gas (ISZERO)
+    require(balances[user] > 0, "no balance");       // 2,100 gas (SLOAD)
+    require(verifyProof(proof), "invalid proof");     // 30+ gas (SHA3)
+}
+```
+
+### 5. Use Events Instead of Storage for Historical Data
+
+```solidity
+// Expensive: storing every transfer in an array
+Transfer[] public transfers;
+function recordTransfer(address to, uint amount) internal {
+    transfers.push(Transfer(to, amount)); // SSTORE: 20,000 gas
+}
+
+// Cheap: emitting an event (indexed off-chain)
+event Transfer(address indexed to, uint amount);
+function recordTransfer(address to, uint amount) internal {
+    emit Transfer(to, amount); // LOG2: ~1,125 gas
+}
+```
+
+### 6. Batch Operations
+
+```solidity
+// Expensive: N separate transactions, each with 21,000 base cost
+for (uint i = 0; i < recipients.length; i++) {
+    // External call per recipient
+}
+
+// Cheaper: single transaction with a loop
+function batchTransfer(address[] calldata recipients, uint[] calldata amounts) external {
+    for (uint i = 0; i < recipients.length; i++) {
+        _transfer(recipients[i], amounts[i]);
+    }
+}
+// Saves (N-1) * 21,000 gas in base transaction costs
+```
+
+## Gas Refunds
+
+The EVM provides gas refunds in specific situations:
+
+- **Clearing storage:** Setting a storage value from non-zero to zero earns a 4,800 gas refund.
+- **Self-destruct:** Destroying a contract earns a 24,000 gas refund (deprecated after EIP-6780).
+
+Refunds are capped at **20% of the total gas consumed** by the transaction (reduced from 50% in EIP-3529). This cap was introduced to prevent refund-based gas token exploits.
+
+```
+max_refund = gas_used / 5
+actual_refund = min(accumulated_refund, max_refund)
+effective_gas_used = gas_used - actual_refund
+```
+
+## Intrinsic Gas: The Floor Cost
+
+Every transaction has a minimum gas cost before any bytecode executes:
+
+| Component | Gas Cost |
+|-----------|----------|
+| Base transaction | 21,000 |
+| Contract creation | 53,000 (32,000 + 21,000) |
+| Zero byte of calldata | 4 |
+| Non-zero byte of calldata | 16 |
+| Access list entry (address) | 2,400 |
+| Access list entry (storage key) | 1,900 |
+
+A simple ETH transfer with no data costs exactly 21,000 gas. A contract call with 100 bytes of non-zero calldata costs at least 21,000 + 100 * 16 = 22,600 gas before the first opcode executes.
+
+## Estimating Gas for a Bytecode Sequence
+
+Let us calculate the gas cost for a bytecode sequence that adds two numbers and stores the result in memory:
+
+```bash
+# Bytecode: 600560070160005260206000F3
+# Instruction     Gas    Running Total
+# PUSH1 0x05       3          3
+# PUSH1 0x07       3          6
+# ADD              3          9
+# PUSH1 0x00       3         12
+# MSTORE           3+3       18  (3 base + 3 for memory expansion to 32 bytes)
+# PUSH1 0x20       3         21
+# PUSH1 0x00       3         24
+# RETURN           0         24
+#
+# Total execution gas: 24
+# Plus intrinsic cost: 21,000 + (13 bytes * 16 per non-zero byte) = 21,208
+# Grand total: ~21,232 gas
+```
+
+Try this in the [Zig EVM Playground](/zig-evm/playground/) to see the per-instruction gas consumption as the program executes.
+
+## Key Takeaways
+
+- Gas is Ethereum's metering system, ensuring termination, fair resource pricing, and spam prevention.
+- Opcode costs range from 0 gas (STOP, RETURN) to 20,000 gas (SSTORE for new values), reflecting actual computational expense.
+- Memory costs grow quadratically, making large allocations prohibitively expensive by design.
+- Storage operations dominate gas costs in most contracts: minimizing SSTORE calls is the single most impactful optimization.
+- EIP-1559 replaced unpredictable gas auctions with an algorithmic base fee (burned) plus a priority tip (paid to validators).
+- Gas refunds for clearing storage are capped at 20% of total gas consumed.
+- Every transaction pays at least 21,000 gas before any bytecode executes, plus 4-16 gas per calldata byte.
+- Practical optimization strategies include storage packing, using calldata over memory, short-circuiting checks, and batching operations.
+- The [Zig EVM](https://github.com/cryptuon/zig-evm) implements accurate gas metering following the Ethereum specification, and you can observe it in action in the [Playground](/zig-evm/playground/).
+
+## Further Reading
+
+- [EVM Opcodes Explained](/zig-evm/blog/evm-opcodes-explained/) — complete reference to every opcode and its gas cost
+- [How the EVM Works](/zig-evm/blog/how-evm-works/) — architecture deep dive covering the stack, memory, and storage model
+- [EVM Storage Layout](/zig-evm/blog/evm-storage-layout-explained/) — how Solidity maps variables to storage slots (the most expensive operations)
+- [EVM Precompiled Contracts](/zig-evm/blog/evm-precompiled-contracts/) — special contracts that bypass bytecode execution for gas-efficient cryptographic operations
+- [EVM Security Vulnerabilities](/zig-evm/blog/evm-security-vulnerabilities-guide/) — common vulnerabilities including gas-related attacks like denial of service

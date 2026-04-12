@@ -31,3 +31,8 @@ zig-cache/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Website (Astro)
+website/node_modules/
+website/dist/
+website/.astro/

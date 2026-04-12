@@ -20,8 +20,8 @@ export async function getStaticPaths() {
 const { tag, posts } = Astro.props;
 
 const breadcrumbs = [
-  { name: 'Home', url: '/zig-evm/' },
-  { name: 'Blog', url: '/zig-evm/blog/' },
+  { name: 'Home', url: '/' },
+  { name: 'Blog', url: '/blog/' },
   { name: `Tag: ${tag}` },
 ];
 ---

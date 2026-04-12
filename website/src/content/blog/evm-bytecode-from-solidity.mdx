@@ -19,7 +19,7 @@ faq:
 draft: false
 ---
 
-**TL;DR:** Every Solidity contract becomes a sequence of EVM bytecode instructions before it runs on Ethereum. Understanding this compilation process -- from high-level Solidity to low-level opcodes -- is essential for gas optimization, security auditing, and debugging. This guide walks through the complete journey with real bytecode examples you can trace in the [Zig EVM Playground](/zig-evm/playground/).
+**TL;DR:** Every Solidity contract becomes a sequence of EVM bytecode instructions before it runs on Ethereum. Understanding this compilation process -- from high-level Solidity to low-level opcodes -- is essential for gas optimization, security auditing, and debugging. This guide walks through the complete journey with real bytecode examples you can trace in the [Zig EVM Playground](/playground/).
 
 ## What Is EVM Bytecode?
 
@@ -269,7 +269,7 @@ REVERT           # Revert with no data (or with encoded error)
 
 ## Tracing Bytecode Execution
 
-The best way to learn bytecode is to execute it step by step. The [Zig EVM Playground](/zig-evm/playground/) provides an interactive environment for exactly this.
+The best way to learn bytecode is to execute it step by step. The [Zig EVM Playground](/playground/) provides an interactive environment for exactly this.
 
 ### Step-by-Step Trace Example
 
@@ -391,12 +391,12 @@ This metadata is why two compilations of identical Solidity code can produce dif
 - **Storage operations dominate gas costs.** A single `SLOAD` costs 2,100 gas (cold) compared to 3 gas for `ADD`. Bytecode-level optimization focuses on minimizing storage access.
 - **Constants compile to inline PUSH instructions**, making them effectively free to read. Use `constant` and `immutable` wherever possible.
 - **Decompilation is possible but lossy.** Variable names, comments, and some type information cannot be recovered from bytecode alone.
-- **Step-through execution is the most effective learning method.** Use the [Zig EVM Playground](/zig-evm/playground/) or the [Zig EVM CLI](https://github.com/cryptuon/zig-evm) to trace bytecode instruction by instruction.
+- **Step-through execution is the most effective learning method.** Use the [Zig EVM Playground](/playground/) or the [Zig EVM CLI](https://github.com/cryptuon/zig-evm) to trace bytecode instruction by instruction.
 
 ## Further Resources
 
 - [Zig EVM source code](https://github.com/cryptuon/zig-evm) -- A complete EVM implementation in Zig with 96 opcodes
-- [Zig EVM Playground](/zig-evm/playground/) -- Interactive bytecode execution in your browser
+- [Zig EVM Playground](/playground/) -- Interactive bytecode execution in your browser
 - [Ethereum Yellow Paper](https://ethereum.github.io/yellowpaper/paper.pdf) -- Formal specification of the EVM
 - [EVM Codes](https://www.evm.codes/) -- Interactive opcode reference with gas costs
 - [Solidity Documentation](https://docs.soliditylang.org/) -- Official compiler documentation

@@ -211,7 +211,7 @@ fn executeCall(evm: *EVM, target: u160, input: []const u8) ![]u8 {
 }
 ```
 
-You can experiment with how CALL instructions interact with precompile addresses in the [Zig EVM Playground](/zig-evm/playground/), where you can step through bytecode execution and observe the precompile dispatch.
+You can experiment with how CALL instructions interact with precompile addresses in the [Zig EVM Playground](/playground/), where you can step through bytecode execution and observe the precompile dispatch.
 
 ## Calling Precompiles from Solidity
 
@@ -285,7 +285,7 @@ Implementation considerations include:
 - **Edge case handling**: What happens when ecrecover receives an invalid signature? When modexp gets a zero modulus? Each precompile has specific error behaviors.
 - **Performance**: Precompiles are called frequently. The BN256 operations in particular benefit from optimized assembly implementations.
 
-In the Zig EVM, we leverage Zig's comptime capabilities and explicit memory management to implement precompiles with minimal overhead. You can explore the implementation and test precompile behavior in the [Zig EVM Playground](/zig-evm/playground/).
+In the Zig EVM, we leverage Zig's comptime capabilities and explicit memory management to implement precompiles with minimal overhead. You can explore the implementation and test precompile behavior in the [Zig EVM Playground](/playground/).
 
 ## Upcoming Precompile Proposals
 

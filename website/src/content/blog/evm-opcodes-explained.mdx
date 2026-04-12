@@ -50,7 +50,7 @@ Here is a minimal example. The bytecode `6005600401` computes `5 + 4`:
 # 01     -> ADD           Stack: [9]
 ```
 
-The `PUSH1` opcode reads the next byte from the bytecode stream and pushes it onto the stack. The `ADD` opcode pops two values, adds them, and pushes the result. You can try this yourself in the [Zig EVM Playground](/zig-evm/playground/).
+The `PUSH1` opcode reads the next byte from the bytecode stream and pushes it onto the stack. The `ADD` opcode pops two values, adds them, and pushes the result. You can try this yourself in the [Zig EVM Playground](/playground/).
 
 ## Opcode Categories
 
@@ -262,7 +262,7 @@ Let us trace through a bytecode sequence that computes `(3 + 7) * 2` and stores 
 # F3        RETURN          Returns memory[0..31] = 20
 ```
 
-You can paste this bytecode into the [Zig EVM Playground](/zig-evm/playground/) to step through it instruction by instruction.
+You can paste this bytecode into the [Zig EVM Playground](/playground/) to step through it instruction by instruction.
 
 ## Gas Costs by Category
 
@@ -281,7 +281,7 @@ Understanding gas costs is critical for writing efficient smart contracts. Here 
 | Storage write | 5,000-20,000 | SSTORE |
 | Contract creation | 32,000 | CREATE, CREATE2 |
 
-For a deeper exploration of gas costs and optimization strategies, see our guide on [Understanding EVM Gas](/zig-evm/blog/understanding-evm-gas/).
+For a deeper exploration of gas costs and optimization strategies, see our guide on [Understanding EVM Gas](/blog/understanding-evm-gas/).
 
 ## How Zig EVM Implements Opcodes
 
@@ -305,13 +305,13 @@ Several tools let you experiment with opcodes interactively:
 
 | Tool | Type | Best For |
 |------|------|----------|
-| [Zig EVM Playground](/zig-evm/playground/) | Web-based editor + debugger | Writing raw bytecode, stack visualization, execution tracing |
+| [Zig EVM Playground](/playground/) | Web-based editor + debugger | Writing raw bytecode, stack visualization, execution tracing |
 | [evm.codes](https://www.evm.codes/) | Interactive reference | Looking up individual opcodes, gas costs, and stack effects |
 | [ethervm.io](https://ethervm.io/) | Opcode reference | Quick opcode lookup with decompiler |
 | Remix IDE | Full Solidity IDE | Debugging compiled Solidity at the opcode level |
 | Foundry (forge) | CLI toolchain | Tracing opcode execution in tests and on-chain transactions |
 
-The [Zig EVM Playground](/zig-evm/playground/) is unique in providing a Catppuccin-themed bytecode editor with real-time disassembly and stack visualization — ideal for learning how opcodes transform the stack step by step.
+The [Zig EVM Playground](/playground/) is unique in providing a Catppuccin-themed bytecode editor with real-time disassembly and stack visualization — ideal for learning how opcodes transform the stack step by step.
 
 ## Key Takeaways
 
@@ -322,4 +322,4 @@ The [Zig EVM Playground](/zig-evm/playground/) is unique in providing a Catppucc
 - Memory costs grow quadratically, preventing unbounded allocation.
 - Every valid jump destination must be marked with JUMPDEST for safety.
 - The Zig EVM project provides a modular, testable implementation of 96 opcodes that you can study and extend.
-- You can experiment with raw bytecode in the [Zig EVM Playground](/zig-evm/playground/) or explore the full source on [GitHub](https://github.com/cryptuon/zig-evm).
+- You can experiment with raw bytecode in the [Zig EVM Playground](/playground/) or explore the full source on [GitHub](https://github.com/cryptuon/zig-evm).

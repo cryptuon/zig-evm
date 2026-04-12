@@ -18,14 +18,14 @@ const collectionSchema = {
     itemListElement: posts.map((post, i) => ({
       '@type': 'ListItem',
       position: i + 1,
-      url: new URL(`/zig-evm/blog/${post.slug}/`, Astro.site).toString(),
+      url: new URL(`/blog/${post.slug}/`, Astro.site).toString(),
       name: post.data.title,
     })),
   },
 };
 
 const breadcrumbs = [
-  { name: 'Home', url: '/zig-evm/' },
+  { name: 'Home', url: '/' },
   { name: 'Blog' },
 ];
 ---

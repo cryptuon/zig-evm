@@ -39,7 +39,7 @@ At the EVM level, storage is accessed through two opcodes:
 # 54     -> SLOAD         Stack: [value_at_slot_0]
 ```
 
-You can step through SLOAD and SSTORE execution in the [Zig EVM Playground](/zig-evm/playground/) to see exactly how the stack and storage interact.
+You can step through SLOAD and SSTORE execution in the [Zig EVM Playground](/playground/) to see exactly how the stack and storage interact.
 
 ## How Solidity Assigns Storage Slots
 
@@ -327,7 +327,7 @@ This capability means that **nothing stored in a smart contract is truly private
 
 ## Exploring Storage in the Zig EVM
 
-The [Zig EVM project](https://github.com/cryptuon/zig-evm) implements storage as a HashMap-based key-value store, closely mirroring the EVM specification. You can observe storage operations at the opcode level using the [Zig EVM Playground](/zig-evm/playground/):
+The [Zig EVM project](https://github.com/cryptuon/zig-evm) implements storage as a HashMap-based key-value store, closely mirroring the EVM specification. You can observe storage operations at the opcode level using the [Zig EVM Playground](/playground/):
 
 ```zig
 // Zig EVM storage implementation uses HashMap for O(1) access

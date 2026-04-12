@@ -382,7 +382,7 @@ contract SafeDispatcher {
 }
 ```
 
-For a deep dive into DELEGATECALL mechanics and the proxy pattern, see our [EVM Call Types Explained](/zig-evm/blog/evm-call-types-explained/) guide.
+For a deep dive into DELEGATECALL mechanics and the proxy pattern, see our [EVM Call Types Explained](/blog/evm-call-types-explained/) guide.
 
 **Real-world incident:** The Parity multisig hack (2017) exploited an unprotected delegatecall to take ownership of wallets containing $30M+ in ETH.
 
@@ -504,7 +504,7 @@ Before deploying any contract handling significant value:
 
 The [Zig EVM project](https://github.com/cryptuon/zig-evm) provides a transparent, from-scratch EVM implementation where you can study exactly how each opcode executes. Understanding vulnerabilities at the bytecode level -- seeing how SSTORE is sequenced relative to CALL, or how storage slots map to variables -- gives you deeper insight than working only at the Solidity level.
 
-Try stepping through vulnerable patterns in the [Zig EVM Playground](/zig-evm/playground/) to see exactly how reentrancy exploits work at the opcode level.
+Try stepping through vulnerable patterns in the [Zig EVM Playground](/playground/) to see exactly how reentrancy exploits work at the opcode level.
 
 ```bash
 # Clone and build the Zig EVM
@@ -528,8 +528,8 @@ zig build test
 
 ## Further Reading
 
-- [EVM Call Types Explained](/zig-evm/blog/evm-call-types-explained/) -- deep dive into CALL, DELEGATECALL, and STATICCALL
-- [EVM Opcodes Explained](/zig-evm/blog/evm-opcodes-explained/) -- complete opcode reference
-- [How the EVM Works](/zig-evm/blog/how-evm-works/) -- foundational EVM architecture
+- [EVM Call Types Explained](/blog/evm-call-types-explained/) -- deep dive into CALL, DELEGATECALL, and STATICCALL
+- [EVM Opcodes Explained](/blog/evm-opcodes-explained/) -- complete opcode reference
+- [How the EVM Works](/blog/how-evm-works/) -- foundational EVM architecture
 - [Zig EVM on GitHub](https://github.com/cryptuon/zig-evm) -- explore the source code
-- [Zig EVM Playground](/zig-evm/playground/) -- test bytecode interactively
+- [Zig EVM Playground](/playground/) -- test bytecode interactively

@@ -17,7 +17,7 @@ export interface Props {
 const {
   title,
   description,
-  image = '/zig-evm/og-default.png',
+  image = '/og-default.png',
   type = 'website',
   publishedTime,
   modifiedTime,
@@ -38,11 +38,11 @@ const websiteSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'Zig EVM',
-  url: new URL('/zig-evm/', Astro.site).toString(),
+  url: new URL('/', Astro.site).toString(),
   description: 'High-performance, embeddable Ethereum Virtual Machine implementation in Zig',
   potentialAction: {
     '@type': 'SearchAction',
-    target: `${new URL('/zig-evm/blog/', Astro.site)}?q={search_term_string}`,
+    target: `${new URL('/blog/', Astro.site)}?q={search_term_string}`,
     'query-input': 'required name=search_term_string',
   },
 };

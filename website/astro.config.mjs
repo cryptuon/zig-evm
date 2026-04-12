@@ -7,8 +7,7 @@ import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import remarkGfm from 'remark-gfm';
 
 export default defineConfig({
-  site: 'https://cryptuon.github.io',
-  base: '/zig-evm',
+  site: 'https://zig-evm.cryptuon.com',
   integrations: [
     mdx(),
     sitemap(),

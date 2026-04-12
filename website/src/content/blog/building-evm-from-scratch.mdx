@@ -255,7 +255,7 @@ zig build test
 zig build test -Doptimize=ReleaseFast
 ```
 
-You can also explore opcode behavior interactively using the [Zig EVM Playground](/zig-evm/playground/), which lets you step through bytecode execution and inspect the stack at each step.
+You can also explore opcode behavior interactively using the [Zig EVM Playground](/playground/), which lets you step through bytecode execution and inspect the stack at each step.
 
 ## Challenges and Lessons Learned
 
@@ -300,7 +300,7 @@ Our initial HashMap-based dispatch was not the bottleneck we expected. Profiling
 | Memory expansion | O(1) amortized | Geometric reallocation strategy |
 | Parallel speedup | 5-6x | For independent transaction batches |
 
-For detailed benchmark methodology and comparisons, see our [benchmarking article](/zig-evm/blog/benchmarking-evm-implementations/).
+For detailed benchmark methodology and comparisons, see our [benchmarking article](/blog/benchmarking-evm-implementations/).
 
 ## Key Takeaways
 
@@ -325,7 +325,7 @@ zig build test
 zig build run
 
 # Try the interactive playground
-# Visit the online playground at /zig-evm/playground/
+# Visit the online playground at /playground/
 ```
 
-To experiment with bytecode execution without installing anything, try the [Zig EVM Playground](/zig-evm/playground/) -- it provides a browser-based interface for stepping through EVM bytecode and inspecting machine state at each instruction.
+To experiment with bytecode execution without installing anything, try the [Zig EVM Playground](/playground/) -- it provides a browser-based interface for stepping through EVM bytecode and inspecting machine state at each instruction.

@@ -231,7 +231,7 @@ pub fn execute(self: *EVM) !void {
 
 This pre-deduction model is important: if an opcode fails, the gas it would have consumed is already deducted. This matches Ethereum's behavior where a reverted transaction still costs gas.
 
-You can observe gas consumption in real time using the [Zig EVM Playground](/zig-evm/playground/), which displays the gas cost of each instruction as it executes.
+You can observe gas consumption in real time using the [Zig EVM Playground](/playground/), which displays the gas cost of each instruction as it executes.
 
 ## Gas Optimization Techniques
 
@@ -389,7 +389,7 @@ Let us calculate the gas cost for a bytecode sequence that adds two numbers and 
 # Grand total: ~21,232 gas
 ```
 
-Try this in the [Zig EVM Playground](/zig-evm/playground/) to see the per-instruction gas consumption as the program executes.
+Try this in the [Zig EVM Playground](/playground/) to see the per-instruction gas consumption as the program executes.
 
 ## Key Takeaways
 
@@ -401,12 +401,12 @@ Try this in the [Zig EVM Playground](/zig-evm/playground/) to see the per-instru
 - Gas refunds for clearing storage are capped at 20% of total gas consumed.
 - Every transaction pays at least 21,000 gas before any bytecode executes, plus 4-16 gas per calldata byte.
 - Practical optimization strategies include storage packing, using calldata over memory, short-circuiting checks, and batching operations.
-- The [Zig EVM](https://github.com/cryptuon/zig-evm) implements accurate gas metering following the Ethereum specification, and you can observe it in action in the [Playground](/zig-evm/playground/).
+- The [Zig EVM](https://github.com/cryptuon/zig-evm) implements accurate gas metering following the Ethereum specification, and you can observe it in action in the [Playground](/playground/).
 
 ## Further Reading
 
-- [EVM Opcodes Explained](/zig-evm/blog/evm-opcodes-explained/) — complete reference to every opcode and its gas cost
-- [How the EVM Works](/zig-evm/blog/how-evm-works/) — architecture deep dive covering the stack, memory, and storage model
-- [EVM Storage Layout](/zig-evm/blog/evm-storage-layout-explained/) — how Solidity maps variables to storage slots (the most expensive operations)
-- [EVM Precompiled Contracts](/zig-evm/blog/evm-precompiled-contracts/) — special contracts that bypass bytecode execution for gas-efficient cryptographic operations
-- [EVM Security Vulnerabilities](/zig-evm/blog/evm-security-vulnerabilities-guide/) — common vulnerabilities including gas-related attacks like denial of service
+- [EVM Opcodes Explained](/blog/evm-opcodes-explained/) — complete reference to every opcode and its gas cost
+- [How the EVM Works](/blog/how-evm-works/) — architecture deep dive covering the stack, memory, and storage model
+- [EVM Storage Layout](/blog/evm-storage-layout-explained/) — how Solidity maps variables to storage slots (the most expensive operations)
+- [EVM Precompiled Contracts](/blog/evm-precompiled-contracts/) — special contracts that bypass bytecode execution for gas-efficient cryptographic operations
+- [EVM Security Vulnerabilities](/blog/evm-security-vulnerabilities-guide/) — common vulnerabilities including gas-related attacks like denial of service

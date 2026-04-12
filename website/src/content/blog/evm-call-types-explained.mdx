@@ -352,7 +352,7 @@ CALL with ETH transfer can trigger the recipient's `receive()` or `fallback()` f
 
 The [Zig EVM project](https://github.com/cryptuon/zig-evm) implements these call-type opcodes along with the rest of the EVM instruction set, giving you a transparent environment to study exactly how the stack and memory behave during cross-contract calls.
 
-You can experiment with bytecode-level call sequences in the [Zig EVM Playground](/zig-evm/playground/), stepping through each opcode to observe how `msg.sender`, storage context, and return data change depending on the call type.
+You can experiment with bytecode-level call sequences in the [Zig EVM Playground](/playground/), stepping through each opcode to observe how `msg.sender`, storage context, and return data change depending on the call type.
 
 ```bash
 # Clone the Zig EVM and run the test suite
@@ -377,5 +377,5 @@ zig build test
 - [EIP-7: DELEGATECALL](https://eips.ethereum.org/EIPS/eip-7) -- the original proposal
 - [EIP-214: STATICCALL](https://eips.ethereum.org/EIPS/eip-214) -- new opcode for static calls
 - [EIP-1967: Standard Proxy Storage Slots](https://eips.ethereum.org/EIPS/eip-1967) -- proxy pattern standard
-- [EVM Opcodes Explained](/zig-evm/blog/evm-opcodes-explained/) -- our comprehensive opcode reference
+- [EVM Opcodes Explained](/blog/evm-opcodes-explained/) -- our comprehensive opcode reference
 - [Zig EVM on GitHub](https://github.com/cryptuon/zig-evm) -- explore the source code

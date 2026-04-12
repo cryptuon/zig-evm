@@ -37,7 +37,7 @@ const blogPostingSchema: Record<string, unknown> = {
   publisher: {
     '@type': 'Organization',
     name: 'Zig EVM',
-    url: 'https://cryptuon.github.io/zig-evm/',
+    url: 'https://zig-evm.cryptuon.com/',
   },
   mainEntityOfPage: {
     '@type': 'WebPage',
@@ -64,8 +64,8 @@ const faqSchema = faq && faq.length > 0 ? {
 const jsonLd = [blogPostingSchema, ...(faqSchema ? [faqSchema] : [])];
 
 const breadcrumbs = [
-  { name: 'Home', url: '/zig-evm/' },
-  { name: 'Blog', url: '/zig-evm/blog/' },
+  { name: 'Home', url: '/' },
+  { name: 'Blog', url: '/blog/' },
   { name: title },
 ];
 ---

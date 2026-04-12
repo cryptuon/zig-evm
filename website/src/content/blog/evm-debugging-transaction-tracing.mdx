@@ -316,7 +316,7 @@ For production incident debugging, Tenderly is often the fastest path to underst
 
 ### The Zig EVM Playground
 
-For learning and experimentation, the [Zig EVM Playground](/zig-evm/playground/) provides a controlled environment where you can:
+For learning and experimentation, the [Zig EVM Playground](/playground/) provides a controlled environment where you can:
 
 - Write raw bytecode and step through execution one opcode at a time
 - Observe the stack, memory, and storage after each instruction
@@ -395,5 +395,5 @@ The slippage tolerance was set too tight for the pool's current reserves. The so
 - **debug_traceTransaction requires an archive node** with debug APIs enabled. Hosted alternatives like Tenderly provide the same data without running your own infrastructure.
 - **Foundry's debugger (forge test --debug, cast run --debug)** offers the best interactive debugging experience for local development and mainnet fork analysis.
 - **Common debugging patterns** include tracing reverts backward from the REVERT opcode, sorting opcodes by gas cost to find spikes, and detecting reentrancy through nested call patterns.
-- **The Zig EVM Playground** at [/zig-evm/playground/](/zig-evm/playground/) lets you step through raw bytecode execution for educational purposes, complementing production debugging tools.
+- **The Zig EVM Playground** at [/playground/](/playground/) lets you step through raw bytecode execution for educational purposes, complementing production debugging tools.
 - **Nothing replaces reading the actual trace.** Tools can decode and visualize, but understanding how the EVM stack machine operates at the opcode level makes you a fundamentally better debugger.

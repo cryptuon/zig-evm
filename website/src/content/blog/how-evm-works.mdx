@@ -245,7 +245,7 @@ Gas is the EVM's resource metering system. It serves three purposes:
 2. **Resource pricing:** Gas costs reflect the real computational cost of operations, ensuring fair payment to validators.
 3. **Execution bounding:** Every transaction has a gas limit, guaranteeing termination.
 
-For a comprehensive treatment of gas costs and optimization strategies, see our guide on [Understanding EVM Gas](/zig-evm/blog/understanding-evm-gas/).
+For a comprehensive treatment of gas costs and optimization strategies, see our guide on [Understanding EVM Gas](/blog/understanding-evm-gas/).
 
 ### How Gas Flows
 
@@ -296,7 +296,7 @@ for (wave.transactions) |tx| {
 thread_pool.waitAll();
 ```
 
-The optimized parallel executor achieves 5-6x throughput improvement for realistic transaction batches. You can experiment with this in the [Zig EVM Playground](/zig-evm/playground/) or run the benchmarks from the [source repository](https://github.com/cryptuon/zig-evm).
+The optimized parallel executor achieves 5-6x throughput improvement for realistic transaction batches. You can experiment with this in the [Zig EVM Playground](/playground/) or run the benchmarks from the [source repository](https://github.com/cryptuon/zig-evm).
 
 ## Comparison with Other Virtual Machines
 
@@ -321,8 +321,8 @@ The EVM's 256-bit word size and built-in gas metering are its distinguishing fea
 - Memory costs grow quadratically; storage operations are the most expensive common operations.
 - Message calls create nested execution contexts with a maximum depth of 1,024.
 - Parallel execution of independent transactions (as implemented in the [Zig EVM](https://github.com/cryptuon/zig-evm)) can improve throughput by 5-6x without sacrificing correctness.
-- For a detailed look at individual instructions, see our [EVM Opcodes Reference](/zig-evm/blog/evm-opcodes-explained/).
-- Learn about [EVM Gas Costs](/zig-evm/blog/understanding-evm-gas/) to understand how the EVM prices each operation.
-- Explore [Parallel EVM Execution](/zig-evm/blog/parallel-evm-execution/) to see how transaction throughput can be improved 5-6x.
-- Understand [EVM Storage Layout](/zig-evm/blog/evm-storage-layout-explained/) to see how Solidity maps variables to the persistent key-value store.
-- Read about [EVM Security Vulnerabilities](/zig-evm/blog/evm-security-vulnerabilities-guide/) to learn what can go wrong in smart contract execution.
+- For a detailed look at individual instructions, see our [EVM Opcodes Reference](/blog/evm-opcodes-explained/).
+- Learn about [EVM Gas Costs](/blog/understanding-evm-gas/) to understand how the EVM prices each operation.
+- Explore [Parallel EVM Execution](/blog/parallel-evm-execution/) to see how transaction throughput can be improved 5-6x.
+- Understand [EVM Storage Layout](/blog/evm-storage-layout-explained/) to see how Solidity maps variables to the persistent key-value store.
+- Read about [EVM Security Vulnerabilities](/blog/evm-security-vulnerabilities-guide/) to learn what can go wrong in smart contract execution.

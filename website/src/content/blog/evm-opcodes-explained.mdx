@@ -1,0 +1,325 @@
+---
+title: "EVM Opcodes Explained: A Complete Reference Guide"
+description: "Learn how EVM opcodes work, from arithmetic and stack operations to memory, flow control, and system calls. Includes gas costs, bytecode examples, and categories."
+pubDate: 2026-04-12
+author: "Zig EVM Team"
+tags: [EVM, opcodes, Ethereum, bytecode, smart-contracts]
+keywords: [evm opcodes, ethereum opcodes, evm bytecode, evm instruction set, solidity bytecode, opcode gas cost, evm stack, smart contract bytecode]
+faq:
+  - question: "What are EVM opcodes?"
+    answer: "EVM opcodes are the low-level instructions that the Ethereum Virtual Machine executes. Every smart contract deployed on Ethereum is compiled down to a sequence of these single-byte opcodes, which manipulate a stack, memory, and persistent storage to carry out computations."
+  - question: "How many opcodes does the EVM have?"
+    answer: "The EVM specification defines approximately 140 opcodes, with byte values ranging from 0x00 to 0xFF. Not all 256 possible byte values are assigned; unassigned values are treated as INVALID and revert execution."
+  - question: "What is the difference between PUSH and DUP opcodes?"
+    answer: "PUSH opcodes (PUSH1 through PUSH32) place a new value onto the stack from the bytecode itself. DUP opcodes (DUP1 through DUP16) copy an existing stack item at a given depth and place the copy on top. PUSH increases the stack size by one, while DUP also increases it by one but reads from the existing stack rather than from bytecode."
+  - question: "Why do different opcodes cost different amounts of gas?"
+    answer: "Gas costs reflect the computational resources an opcode consumes on the network. Simple operations like ADD cost 3 gas, while storage writes (SSTORE) cost 5,000-20,000 gas because they permanently alter blockchain state that every full node must store indefinitely."
+  - question: "Can I test EVM opcodes without deploying to Ethereum?"
+    answer: "Yes. You can use local tools like the Zig EVM playground, Remix IDE, or Hardhat's local node to execute bytecode and inspect opcode-level behavior without spending real ETH."
+draft: false
+---
+
+**TL;DR:** EVM opcodes are the atomic instructions that power every smart contract on Ethereum. There are roughly 140 opcodes organized into categories -- arithmetic, stack manipulation, memory, storage, flow control, and system operations. Each opcode consumes a specific amount of gas, operates on a 256-bit stack, and together they form the bytecode that the Ethereum Virtual Machine executes. This guide covers every major category, explains how the stack machine model works, and provides concrete bytecode examples you can experiment with.
+
+## What Are EVM Opcodes?
+
+Every smart contract on Ethereum, regardless of whether it was written in Solidity, Vyper, or Huff, compiles down to a sequence of **opcodes** -- single-byte instructions that the Ethereum Virtual Machine (EVM) understands natively. An opcode is the smallest unit of execution on Ethereum.
+
+The EVM is a **stack-based virtual machine**. Unlike register-based architectures (x86, ARM), it has no general-purpose registers. Instead, all computation happens by pushing values onto and popping values off a last-in-first-out stack. Each stack element is a 256-bit (32-byte) word, and the stack has a maximum depth of 1,024 items.
+
+**The EVM defines approximately 140 opcodes, each identified by a single byte from 0x00 to 0xFF.** Any byte value that does not correspond to a valid opcode is treated as `INVALID` (0xFE) and causes execution to revert.
+
+## How the Stack Machine Model Works
+
+Before diving into opcode categories, it is essential to understand the execution model:
+
+1. The EVM reads bytecode one byte at a time from left to right.
+2. Each byte is looked up in the opcode table.
+3. The opcode pops its inputs from the top of the stack.
+4. It performs its computation.
+5. It pushes any outputs back onto the stack.
+6. The program counter advances to the next instruction.
+
+Here is a minimal example. The bytecode `6005600401` computes `5 + 4`:
+
+```bash
+# Bytecode: 6005600401
+# Step-by-step execution:
+# 60 05  -> PUSH1 0x05    Stack: [5]
+# 60 04  -> PUSH1 0x04    Stack: [4, 5]
+# 01     -> ADD           Stack: [9]
+```
+
+The `PUSH1` opcode reads the next byte from the bytecode stream and pushes it onto the stack. The `ADD` opcode pops two values, adds them, and pushes the result. You can try this yourself in the [Zig EVM Playground](/zig-evm/playground/).
+
+## Opcode Categories
+
+### Arithmetic Operations (0x01 - 0x0B)
+
+Arithmetic opcodes perform math on 256-bit unsigned integers. All results are computed modulo 2^256.
+
+| Opcode | Byte | Gas | Description |
+|--------|------|-----|-------------|
+| ADD | 0x01 | 3 | Addition |
+| MUL | 0x02 | 5 | Multiplication |
+| SUB | 0x03 | 3 | Subtraction |
+| DIV | 0x04 | 5 | Integer division |
+| SDIV | 0x05 | 5 | Signed integer division |
+| MOD | 0x06 | 5 | Modulo |
+| SMOD | 0x07 | 5 | Signed modulo |
+| ADDMOD | 0x08 | 8 | Addition modulo |
+| MULMOD | 0x09 | 8 | Multiplication modulo |
+| EXP | 0x0A | 10+ | Exponentiation |
+| SIGNEXTEND | 0x0B | 5 | Sign extension |
+
+In the [Zig EVM implementation](https://github.com/cryptuon/zig-evm), each arithmetic opcode is implemented as a separate file. For example, the ADD opcode:
+
+```zig
+// src/opcodes/add.zig -- Zig EVM ADD implementation
+fn execute(evm: *EVM) !void {
+    // Pop two values from the stack
+    const a = try evm.stack.pop();
+    const b = try evm.stack.pop();
+    // Push the result (modulo 2^256 by nature of u256)
+    try evm.stack.push(a +% b);
+}
+```
+
+The `+%` operator in Zig performs wrapping addition, which naturally gives us modulo 2^256 behavior -- exactly what the EVM specification requires.
+
+### Comparison and Bitwise Operations (0x10 - 0x1D)
+
+These opcodes compare stack values or perform bitwise logic.
+
+| Opcode | Byte | Gas | Description |
+|--------|------|-----|-------------|
+| LT | 0x10 | 3 | Less than |
+| GT | 0x11 | 3 | Greater than |
+| SLT | 0x12 | 3 | Signed less than |
+| SGT | 0x13 | 3 | Signed greater than |
+| EQ | 0x14 | 3 | Equality |
+| ISZERO | 0x15 | 3 | Is zero |
+| AND | 0x16 | 3 | Bitwise AND |
+| OR | 0x17 | 3 | Bitwise OR |
+| XOR | 0x18 | 3 | Bitwise XOR |
+| NOT | 0x19 | 3 | Bitwise NOT |
+| BYTE | 0x1A | 3 | Extract byte |
+| SHL | 0x1B | 3 | Shift left |
+| SHR | 0x1C | 3 | Shift right |
+| SAR | 0x1D | 3 | Arithmetic shift right |
+
+Comparison opcodes push `1` for true and `0` for false. This bytecode checks whether 10 > 5:
+
+```bash
+# Bytecode: 600A600511
+# 60 0A  -> PUSH1 10     Stack: [10]
+# 60 05  -> PUSH1 5      Stack: [5, 10]
+# 11     -> GT           Stack: [1]  (true, because 10 > 5)
+```
+
+### Stack Operations (0x50, 0x60-0x9F)
+
+Stack opcodes manage the stack directly. They are among the most frequently executed instructions in any contract.
+
+**PUSH opcodes (0x60 - 0x7F):** PUSH1 through PUSH32 push 1 to 32 bytes from the bytecode onto the stack. These are the only opcodes that consume additional bytes from the bytecode stream.
+
+```bash
+# PUSH1 pushes 1 byte
+60 FF          # Pushes 0xFF (255)
+
+# PUSH2 pushes 2 bytes
+61 01 00       # Pushes 0x0100 (256)
+
+# PUSH32 pushes 32 bytes (a full 256-bit word)
+7F 00...01     # Pushes a full 256-bit value
+```
+
+**DUP opcodes (0x80 - 0x8F):** DUP1 through DUP16 duplicate the Nth stack item and place the copy on top.
+
+**SWAP opcodes (0x90 - 0x9F):** SWAP1 through SWAP16 swap the top stack item with the (N+1)th item.
+
+| Opcode | Byte | Gas | Description |
+|--------|------|-----|-------------|
+| POP | 0x50 | 2 | Remove top item |
+| PUSH1-32 | 0x60-0x7F | 3 | Push N bytes |
+| DUP1-16 | 0x80-0x8F | 3 | Duplicate Nth item |
+| SWAP1-16 | 0x90-0x9F | 3 | Swap top with Nth |
+
+### Memory Operations (0x51 - 0x59)
+
+The EVM provides a linear, byte-addressable memory space that is volatile -- it exists only during a single transaction execution. Memory is word-addressed in 32-byte chunks for load and store, but byte-level writes are also supported.
+
+| Opcode | Byte | Gas | Description |
+|--------|------|-----|-------------|
+| MLOAD | 0x51 | 3+ | Load 32 bytes from memory |
+| MSTORE | 0x52 | 3+ | Store 32 bytes to memory |
+| MSTORE8 | 0x53 | 3+ | Store 1 byte to memory |
+| MSIZE | 0x59 | 2 | Get current memory size |
+
+Memory costs increase quadratically as you use more of it. The gas cost for memory expansion is:
+
+```
+memory_cost = (memory_size_words ^ 2) / 512 + 3 * memory_size_words
+```
+
+This quadratic cost prevents contracts from allocating unlimited memory.
+
+```zig
+// Zig EVM memory expansion cost calculation
+pub fn memoryCost(size_in_bytes: u64) u64 {
+    const size_words = (size_in_bytes + 31) / 32;
+    return (size_words * size_words) / 512 + 3 * size_words;
+}
+```
+
+### Storage Operations (0x54 - 0x55)
+
+Storage is the persistent key-value store associated with each contract address. Unlike memory, storage persists between transactions.
+
+| Opcode | Byte | Gas | Description |
+|--------|------|-----|-------------|
+| SLOAD | 0x54 | 2,100 | Load from storage |
+| SSTORE | 0x55 | 5,000-20,000 | Store to storage |
+
+SSTORE is the most expensive common opcode because it permanently modifies the blockchain state. Writing a non-zero value to a previously zero storage slot costs 20,000 gas. Modifying an existing non-zero slot costs 5,000 gas.
+
+### Flow Control (0x56 - 0x5B)
+
+Flow control opcodes change the program counter, enabling loops, conditionals, and function dispatch.
+
+| Opcode | Byte | Gas | Description |
+|--------|------|-----|-------------|
+| JUMP | 0x56 | 8 | Unconditional jump |
+| JUMPI | 0x57 | 10 | Conditional jump |
+| JUMPDEST | 0x5B | 1 | Mark valid jump destination |
+| PC | 0x58 | 2 | Get program counter |
+
+Every `JUMP` or `JUMPI` destination must be a `JUMPDEST` instruction. This is a critical safety feature: it prevents jumps into the middle of PUSH data or arbitrary bytecode positions.
+
+```bash
+# Simple conditional: if top-of-stack != 0, jump to offset 0x0A
+# 60 0A  -> PUSH1 0x0A   (jump destination)
+# 60 01  -> PUSH1 0x01   (condition: true)
+# 57     -> JUMPI         (conditional jump)
+# ...
+# 5B     -> JUMPDEST      (at offset 0x0A)
+```
+
+### System Operations (0xF0 - 0xFF)
+
+System opcodes handle contract creation, external calls, and self-destruction.
+
+| Opcode | Byte | Gas | Description |
+|--------|------|-----|-------------|
+| CREATE | 0xF0 | 32,000 | Create a new contract |
+| CALL | 0xF1 | Variable | Call another contract |
+| CALLCODE | 0xF2 | Variable | Call with caller's storage |
+| RETURN | 0xF3 | 0 | Return output data |
+| DELEGATECALL | 0xF4 | Variable | Delegate call |
+| CREATE2 | 0xF5 | 32,000 | Create with deterministic address |
+| STATICCALL | 0xFA | Variable | Read-only call |
+| REVERT | 0xFD | 0 | Revert with output data |
+| SELFDESTRUCT | 0xFF | 5,000+ | Destroy contract |
+
+The `CALL` opcode is the primary mechanism for contract-to-contract interaction. It takes seven stack arguments: gas, address, value, input offset, input size, output offset, and output size.
+
+### Environmental and Block Information (0x30 - 0x48)
+
+These opcodes provide access to transaction and block context.
+
+| Opcode | Byte | Gas | Description |
+|--------|------|-----|-------------|
+| ADDRESS | 0x30 | 2 | Current contract address |
+| BALANCE | 0x31 | 2,600 | Balance of an address |
+| ORIGIN | 0x32 | 2 | Transaction origin |
+| CALLER | 0x33 | 2 | Direct caller |
+| CALLVALUE | 0x34 | 2 | ETH sent with call |
+| CALLDATALOAD | 0x35 | 3 | Load call data |
+| CALLDATASIZE | 0x36 | 2 | Size of call data |
+| GASPRICE | 0x3A | 2 | Gas price of transaction |
+| BLOCKHASH | 0x40 | 20 | Hash of a recent block |
+| COINBASE | 0x41 | 2 | Block miner/proposer |
+| TIMESTAMP | 0x42 | 2 | Block timestamp |
+| NUMBER | 0x43 | 2 | Block number |
+| GASLIMIT | 0x45 | 2 | Block gas limit |
+
+## A Complete Bytecode Example
+
+Let us trace through a bytecode sequence that computes `(3 + 7) * 2` and stores the result in memory:
+
+```bash
+# Bytecode: 600360070160020260005260206000F3
+#
+# 60 03     PUSH1 3         Stack: [3]
+# 60 07     PUSH1 7         Stack: [7, 3]
+# 01        ADD             Stack: [10]
+# 60 02     PUSH1 2         Stack: [2, 10]
+# 02        MUL             Stack: [20]
+# 60 00     PUSH1 0         Stack: [0, 20]
+# 52        MSTORE          Stack: []        Memory[0..31] = 20
+# 60 20     PUSH1 32        Stack: [32]
+# 60 00     PUSH1 0         Stack: [0, 32]
+# F3        RETURN          Returns memory[0..31] = 20
+```
+
+You can paste this bytecode into the [Zig EVM Playground](/zig-evm/playground/) to step through it instruction by instruction.
+
+## Gas Costs by Category
+
+Understanding gas costs is critical for writing efficient smart contracts. Here is a summary by category:
+
+| Category | Typical Gas | Examples |
+|----------|-------------|----------|
+| Zero-cost | 0 | STOP, RETURN, REVERT |
+| Base | 2 | POP, PC, MSIZE |
+| Very low | 3 | ADD, SUB, PUSH, DUP, SWAP |
+| Low | 5 | MUL, DIV, MOD |
+| Mid | 8 | ADDMOD, MULMOD, JUMP |
+| High | 10 | JUMPI, EXP base |
+| Memory | 3+ expansion | MLOAD, MSTORE |
+| Storage read | 2,100 | SLOAD |
+| Storage write | 5,000-20,000 | SSTORE |
+| Contract creation | 32,000 | CREATE, CREATE2 |
+
+For a deeper exploration of gas costs and optimization strategies, see our guide on [Understanding EVM Gas](/zig-evm/blog/understanding-evm-gas/).
+
+## How Zig EVM Implements Opcodes
+
+The [Zig EVM project](https://github.com/cryptuon/zig-evm) implements opcodes using a modular, one-file-per-opcode architecture. Each opcode lives in `src/opcodes/` and exports a `getImpl()` function that returns the opcode byte and an execution function.
+
+```zig
+// Opcode registration in Zig EVM
+// Each opcode is loaded into a HashMap for O(1) dispatch
+pub fn loadOpcodes(self: *EVM) void {
+    const add = @import("opcodes/add.zig").getImpl();
+    self.opcodes.put(add.code, add.impl);
+    // ... repeat for all opcodes
+}
+```
+
+This design makes it straightforward to add new opcodes, test them in isolation, and understand the implementation of any single instruction without reading thousands of lines of code. The project currently implements 96 opcodes, covering arithmetic, stack manipulation, memory, flow control, and environmental queries.
+
+## Tools for Exploring EVM Opcodes
+
+Several tools let you experiment with opcodes interactively:
+
+| Tool | Type | Best For |
+|------|------|----------|
+| [Zig EVM Playground](/zig-evm/playground/) | Web-based editor + debugger | Writing raw bytecode, stack visualization, execution tracing |
+| [evm.codes](https://www.evm.codes/) | Interactive reference | Looking up individual opcodes, gas costs, and stack effects |
+| [ethervm.io](https://ethervm.io/) | Opcode reference | Quick opcode lookup with decompiler |
+| Remix IDE | Full Solidity IDE | Debugging compiled Solidity at the opcode level |
+| Foundry (forge) | CLI toolchain | Tracing opcode execution in tests and on-chain transactions |
+
+The [Zig EVM Playground](/zig-evm/playground/) is unique in providing a Catppuccin-themed bytecode editor with real-time disassembly and stack visualization — ideal for learning how opcodes transform the stack step by step.
+
+## Key Takeaways
+
+- EVM opcodes are single-byte instructions that form the machine code of Ethereum smart contracts.
+- The EVM is a stack machine: all computation happens by pushing to and popping from a 256-bit, 1,024-deep stack.
+- Opcodes are grouped into categories: arithmetic, comparison/bitwise, stack, memory, storage, flow control, environment, and system.
+- Gas costs reflect computational expense: simple math costs 3-5 gas, while storage writes cost up to 20,000 gas.
+- Memory costs grow quadratically, preventing unbounded allocation.
+- Every valid jump destination must be marked with JUMPDEST for safety.
+- The Zig EVM project provides a modular, testable implementation of 96 opcodes that you can study and extend.
+- You can experiment with raw bytecode in the [Zig EVM Playground](/zig-evm/playground/) or explore the full source on [GitHub](https://github.com/cryptuon/zig-evm).

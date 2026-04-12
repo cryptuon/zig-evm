@@ -1,0 +1,51 @@
+# Zig EVM
+
+> High-performance, embeddable Ethereum Virtual Machine implementation in Zig
+
+## About
+
+Zig EVM is an open-source EVM implementation written in Zig. It provides a complete Ethereum Virtual Machine with 96+ opcodes, parallel transaction execution (5-6x throughput), and native FFI bindings for Python, Rust, JavaScript, and C. Licensed under MIT.
+
+## Key Facts
+
+- 96+ EVM opcodes implemented (arithmetic, stack, memory, flow control, environmental)
+- Parallel execution with wave-based transaction processing and work-stealing thread pools
+- 5-6x throughput improvement for independent transactions, linear scaling up to 8 threads
+- Native FFI bindings for Python (ctypes), Rust (FFI), JavaScript (N-API), and C
+- Accurate gas metering matching Ethereum specifications
+- 256-bit integer arithmetic using 4x64-bit words
+- Stack: 1024-item maximum depth with 256-bit word elements
+- Built with Zig for zero-overhead abstractions and compile-time evaluation
+
+## Key Pages
+
+- [Home](https://cryptuon.github.io/zig-evm/): Project landing page with features and benchmarks
+- [Blog](https://cryptuon.github.io/zig-evm/blog/): Articles on EVM internals, Zig programming, and blockchain engineering
+- [Playground](https://cryptuon.github.io/zig-evm/playground/): Interactive EVM bytecode editor and debugger
+- [Documentation](https://docs.cryptuon.com/zig-evm): Full API reference and user guide
+- [GitHub Repository](https://github.com/cryptuon/zig-evm): Source code, issues, and releases
+
+## Topics Covered
+
+- EVM opcode implementation and execution
+- EVM bytecode editing and debugging
+- Parallel EVM transaction processing
+- Wave-based dependency analysis for concurrent execution
+- Zig systems programming for blockchain infrastructure
+- EVM gas metering and optimization
+- FFI bindings for multi-language EVM embedding (Python, Rust, JavaScript, C)
+- EVM architecture: stack machine, memory model, storage
+- 256-bit integer arithmetic for blockchain applications
+- Comparison with other EVM implementations (revm, evmone)
+- Ethereum transaction execution lifecycle
+- EVM memory management and gas cost calculation
+
+## Technical Stack
+
+- Language: Zig
+- Target: Ethereum Virtual Machine (EVM)
+- Architecture: Stack-based virtual machine with LIFO stack (256-bit words)
+- Parallelism: O(n) hash-based dependency analysis, work-stealing thread pool, speculative execution
+- Memory: Arena allocators, memory pools, dynamic byte arrays with automatic expansion
+- Testing: Comprehensive test suite covering BigInt, opcodes, arithmetic, stack, memory, parallel execution
+- Deployment: Static site on GitHub Pages, Docker container for web demo

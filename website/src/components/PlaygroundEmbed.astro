@@ -1,0 +1,26 @@
+---
+export interface Props {
+  height?: string;
+  showBanner?: boolean;
+}
+
+const { height = '80vh', showBanner = true } = Astro.props;
+---
+
+<div class="playground-wrapper">
+  {showBanner && (
+    <div class="mb-4 rounded-lg border border-ctp-yellow/30 bg-ctp-yellow/5 px-4 py-3">
+      <p class="text-sm text-ctp-yellow">
+        <strong>Demo Mode:</strong> The playground runs in offline mode on this static site.
+        For full execution, run the <a href="https://github.com/cryptuon/zig-evm" class="underline">Zig EVM web server</a> locally with <code>zig build web</code>.
+      </p>
+    </div>
+  )}
+  <iframe
+    src={`${import.meta.env.BASE_URL}/playground/`}
+    style={`width: 100%; height: ${height}; border: none; border-radius: 12px;`}
+    title="Zig EVM Interactive Playground - Bytecode Editor and Debugger"
+    loading="lazy"
+    sandbox="allow-scripts allow-same-origin"
+  ></iframe>
+</div>

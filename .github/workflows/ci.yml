@@ -7,7 +7,11 @@ on:
     branches: [main]
 
 env:
-  ZIG_VERSION: "0.13.0"
+  # Pinned to 0.14.1: build.zig uses the 0.14 build-system API
+  # (`b.addExecutable(.{ .root_module = b.createModule(...) })`, `b.addLibrary`,
+  # `b.addTest(.{ .root_module = ... })`). On 0.13.0 every job fails with
+  #   build.zig:9:10: error: no field named 'root_module' in struct 'Build.ExecutableOptions'
+  ZIG_VERSION: "0.14.1"
 
 jobs:
   test:

@@ -319,12 +319,12 @@ zig-evm/
 
 ## Performance Characteristics
 
-| Metric | Value |
-|--------|-------|
-| Single execution | ~1M gas/second |
-| Parallel throughput | 5-6x improvement (8 threads) |
-| Memory overhead | ~100KB per EVM instance |
-| Startup time | <1ms for instance creation |
+The README reports a **5-6x parallel throughput improvement** at 8 threads
+for the workloads measured (100, 500, and 1000 independent transactions).
+Per-instance memory and single-execution throughput depend heavily on
+your build mode and workload; measure with the bundled `zig build bench`
+/ `zig build benchmark` targets on your own hardware rather than relying
+on a single figure. See [Performance Tuning](../advanced/performance.md).
 
 ## Thread Safety
 

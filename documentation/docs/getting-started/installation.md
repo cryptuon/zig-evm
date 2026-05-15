@@ -81,15 +81,19 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-zigevm = { path = "path/to/zig-evm/bindings/rust/zigevm" }
+zigevm = { path = "path/to/zig-evm/bindings/rust" }
 ```
 
 Or build from source:
 
 ```bash
-cd bindings/rust/zigevm
+cd bindings/rust
 cargo build --release
 ```
+
+The Rust crate links against `libzigevm` (`#[link(name = "zigevm")]`), so
+you need to have built the shared library first (`zig build lib`) and
+ensure it is discoverable on the linker path.
 
 ### JavaScript / Node.js
 

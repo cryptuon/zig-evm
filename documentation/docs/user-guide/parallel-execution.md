@@ -101,225 +101,112 @@ Tx1: SLOAD(slot=0x1)
 Result: Tx1 must execute after Tx0
 ```
 
-## Using Batch Executor
+## Using the Batch Executor
 
-=== "Python"
+!!! info "Where the API lives"
+    Batch / parallel execution is implemented inside Zig
+    (`src/batch_executor.zig`, `src/parallel_optimized.zig`) and exposed
+    through the **C ABI** in `include/zigevm.h`
+    (`batch_create`, `batch_set_account`, `batch_set_storage`,
+    `batch_execute`, `batch_get_result`, `batch_destroy`). The current
+    Python, Rust, and JavaScript wrappers in `bindings/` only wrap the
+    single-EVM API; to drive parallel execution today, call the C ABI
+    directly (e.g. via `ctypes` / N-API / `bindgen`) or use the Zig API.
 
-    ```python
-    from zigevm import BatchExecutor, BatchConfig, BatchTransaction
+### C ABI Example
 
-    # Configure batch execution
-    config = BatchConfig(
-        max_threads=8,           # Worker threads
-        enable_parallel=True,    # Enable parallel mode
-        enable_speculation=False, # Conservative mode
-        chain_id=1,
-        block_number=12345678,
-        block_timestamp=1234567890,
-        block_gas_limit=30000000,
-    )
+```c
+#include "zigevm.h"
 
-    # Create executor
-    executor = BatchExecutor(config)
+int main() {
+    BatchConfig config = {
+        .max_threads = 8,
+        .enable_parallel = true,
+        .enable_speculation = false,
+        .chain_id = 1,
+        .block_number = 12345678,
+        .block_timestamp = 1234567890,
+        .block_gas_limit = 30000000,
+    };
 
-    # Set up initial state
-    executor.set_account(
-        address="0x1111111111111111111111111111111111111111",
-        balance=100 * 10**18,
-        nonce=0,
-    )
+    BatchHandle batch = batch_create(&config);
 
-    # Prepare transactions
-    transactions = [
-        BatchTransaction(
-            from_addr="0x1111111111111111111111111111111111111111",
-            to_addr="0x2222222222222222222222222222222222222222",
-            value=1 * 10**18,
-            gas_limit=21000,
-        )
-        for _ in range(1000)
-    ]
-
-    # Execute batch
-    stats = executor.execute(transactions)
-
-    print(f"Transactions: {stats.total_transactions}")
-    print(f"Successful: {stats.successful_transactions}")
-    print(f"Failed: {stats.failed_transactions}")
-    print(f"Total gas: {stats.total_gas_used}")
-    print(f"Time: {stats.execution_time_ns / 1e6:.2f} ms")
-    print(f"Parallel waves: {stats.parallel_waves}")
-    print(f"Max parallelism: {stats.max_parallelism}")
-
-    # Get individual results
-    for i, result in enumerate(executor.get_results()):
-        if not result.success:
-            print(f"Tx {i} failed: {result.error_code}")
-    ```
-
-=== "JavaScript"
-
-    ```javascript
-    const { BatchExecutor } = require('zigevm');
-
-    const executor = new BatchExecutor({
-        maxThreads: 8,
-        enableParallel: true,
-        enableSpeculation: false,
-        chainId: 1n,
-        blockNumber: 12345678n,
-        blockTimestamp: 1234567890n,
-        blockGasLimit: 30000000n,
-    });
-
-    // Set up state
-    executor.setAccount({
-        address: '0x1111111111111111111111111111111111111111',
-        balance: 100n * 10n**18n,
-    });
+    // Set up accounts
+    uint8_t addr[20] = {0x11, /* ... */};
+    uint8_t balance[32] = {/* 100 ETH */};
+    batch_set_account(batch, addr, balance, 0, NULL, 0);
 
     // Prepare transactions
-    const transactions = Array(1000).fill(null).map(() => ({
-        from: '0x1111111111111111111111111111111111111111',
-        to: '0x2222222222222222222222222222222222222222',
-        value: 1n * 10n**18n,
-        gasLimit: 21000n,
-    }));
+    BatchTransaction txs[1000];
+    for (int i = 0; i < 1000; i++) {
+        txs[i] = (BatchTransaction){
+            .from = {0x11, /* ... */},
+            .to = {0x22, /* ... */},
+            .has_to = true,
+            .value = {/* 1 ETH */},
+            .gas_limit = 21000,
+        };
+    }
 
     // Execute
-    const stats = await executor.execute(transactions);
+    BatchStats stats;
+    batch_execute(batch, txs, 1000, &stats);
 
-    console.log(`Transactions: ${stats.totalTransactions}`);
-    console.log(`Parallel waves: ${stats.parallelWaves}`);
-    console.log(`Speedup: ${stats.maxParallelism}x`);
-    ```
+    printf("Transactions: %u\n", stats.total_transactions);
+    printf("Time: %lu ns\n", stats.execution_time_ns);
+    printf("Parallel waves: %u\n", stats.parallel_waves);
 
-=== "C"
+    batch_destroy(batch);
+    return 0;
+}
+```
 
-    ```c
-    #include "zigevm.h"
-
-    int main() {
-        BatchConfig config = {
-            .max_threads = 8,
-            .enable_parallel = true,
-            .enable_speculation = false,
-            .chain_id = 1,
-            .block_number = 12345678,
-            .block_timestamp = 1234567890,
-            .block_gas_limit = 30000000,
-        };
-
-        BatchHandle batch = batch_create(&config);
-
-        // Set up accounts
-        uint8_t addr[20] = {0x11, /* ... */};
-        uint8_t balance[32] = {/* 100 ETH */};
-        batch_set_account(batch, addr, balance, 0, NULL, 0);
-
-        // Prepare transactions
-        BatchTransaction txs[1000];
-        for (int i = 0; i < 1000; i++) {
-            txs[i] = (BatchTransaction){
-                .from = {0x11, /* ... */},
-                .to = {0x22, /* ... */},
-                .has_to = true,
-                .value = {/* 1 ETH */},
-                .gas_limit = 21000,
-            };
-        }
-
-        // Execute
-        BatchStats stats;
-        batch_execute(batch, txs, 1000, &stats);
-
-        printf("Transactions: %u\n", stats.total_transactions);
-        printf("Time: %lu ns\n", stats.execution_time_ns);
-        printf("Parallel waves: %u\n", stats.parallel_waves);
-
-        batch_destroy(batch);
-        return 0;
-    }
-    ```
+For a Zig-side example, see `src/parallel_optimized_example.zig` and run
+`zig build parallel-opt`.
 
 ## Configuration Options
 
-### max_threads
+The `BatchConfig` struct in `include/zigevm.h`:
 
-Number of worker threads for parallel execution.
-
-**Recommendation**: Number of CPU cores, or slightly less.
-
-```python
-config = BatchConfig(max_threads=8)
-```
+| Field | Type | Meaning |
+|-------|------|---------|
+| `max_threads` | `uint32_t` | Maximum worker threads |
+| `enable_parallel` | `bool` | Enable wave-based parallel execution |
+| `enable_speculation` | `bool` | Enable speculative execution + rollback |
+| `chain_id` | `uint64_t` | Chain ID applied to every transaction |
+| `block_number` | `uint64_t` | Block number |
+| `block_timestamp` | `uint64_t` | Block timestamp |
+| `block_gas_limit` | `uint64_t` | Block gas limit |
+| `coinbase` | `uint8_t[20]` | Coinbase address |
 
 ### enable_parallel
 
-Enable/disable parallel execution.
-
-```python
-config = BatchConfig(
-    enable_parallel=True,   # Parallel mode
-    # enable_parallel=False  # Sequential mode (debugging)
-)
-```
+When `false`, transactions are executed sequentially — useful as a
+baseline for benchmarking or for deterministic debugging.
 
 ### enable_speculation
 
-Enable speculative execution for higher parallelism.
-
-```python
-config = BatchConfig(
-    enable_speculation=True,   # Optimistic parallelism
-    # enable_speculation=False  # Conservative (no rollbacks)
-)
-```
-
-**Trade-offs**:
-
 | Setting | Pros | Cons |
 |---------|------|------|
-| `True` | Higher parallelism | May need rollbacks |
-| `False` | No wasted work | Lower parallelism |
+| `true` | Higher parallelism for low-conflict workloads | Conflicting transactions are re-executed |
+| `false` | No wasted work | Lower achievable parallelism |
 
 ## Performance Tuning
 
-### Optimal Batch Size
-
-| Batch Size | Throughput | Overhead |
-|------------|------------|----------|
-| 10 | Low | High (setup cost dominates) |
-| 100 | Medium | Moderate |
-| 1000 | High | Low |
-| 10000 | Very High | Very Low |
-| 100000+ | Maximum | Minimal |
-
-**Recommendation**: Batch sizes of 100-10000 transactions.
-
-### Thread Scaling
-
-| Threads | Speedup (typical) |
-|---------|------------------|
-| 1 | 1.0x (baseline) |
-| 2 | 1.8-2.0x |
-| 4 | 3.2-3.8x |
-| 8 | 5.0-6.5x |
-| 16 | 6.0-8.0x (diminishing) |
+The only published numbers from the project README are the speedups in
+the table at the top of this page (5.1x / 5.9x / 6.0x at 100 / 500 /
+1000 independent transactions on 8 threads). Use the bundled benchmarks
+(`zig build benchmark`, `zig build parallel-opt`, `zig build bench-full`)
+to measure your own workload before tuning, and see
+[Performance Tuning](../advanced/performance.md).
 
 ### Workload Characteristics
 
-**High Parallelism** (5-6x speedup):
-
-- Many independent transfers
-- Different senders/receivers
-- No shared storage access
-
-**Low Parallelism** (1-2x speedup):
-
-- Same sender (nonce ordering)
-- Shared contract state
-- DEX trades on same pair
+The dependency analyzer detects conflicts on sender / receiver addresses
+and on storage slots that are read or written. Workloads parallelize
+well when senders, receivers, and storage slots are largely disjoint;
+they serialize when many transactions share a sender (forcing nonce
+ordering) or hit the same hot storage slots.
 
 ## Speculative Execution
 
@@ -354,48 +241,18 @@ Tx3            Execute       OK            ✓
 
 ## Best Practices
 
-### 1. Batch Similar Transactions
-
-Group transactions with similar gas requirements:
-
-```python
-simple_transfers = [tx for tx in txs if tx.gas_limit < 25000]
-contract_calls = [tx for tx in txs if tx.gas_limit >= 25000]
-
-executor.execute(simple_transfers)
-executor.execute(contract_calls)
-```
-
-### 2. Pre-sort by Sender
-
-Sort transactions by sender to improve nonce handling:
-
-```python
-txs.sort(key=lambda tx: (tx.from_addr, tx.nonce))
-```
-
-### 3. Monitor Parallelism
-
-Track actual parallelism achieved:
-
-```python
-stats = executor.execute(transactions)
-parallelism_ratio = stats.max_parallelism / config.max_threads
-
-if parallelism_ratio < 0.5:
-    print("Warning: Low parallelism, consider transaction ordering")
-```
-
-### 4. Handle Failures Gracefully
-
-```python
-for i, result in enumerate(executor.get_results()):
-    if not result.success:
-        if result.reverted:
-            handle_revert(transactions[i], result.return_data)
-        else:
-            handle_error(transactions[i], result.error_code)
-```
+1. **Pre-sort by sender + nonce.** Same-sender transactions must
+   serialize, so grouping them keeps the dependency graph compact.
+2. **Monitor parallelism via `BatchStats`.** The `parallel_waves` and
+   `max_parallelism` fields tell you whether you are bottlenecked on
+   dependency chains; if `max_parallelism` is consistently far below
+   `max_threads`, the workload itself is the limit.
+3. **Iterate `batch_get_result` for per-transaction outcomes.** The
+   `BatchResult` struct exposes `success`, `reverted`, `gas_used`,
+   `error_code`, `logs_count`, and (for contract creations)
+   `created_address`.
+4. **Disable speculation under high conflict rates.** Re-execution
+   from rollback costs gas and time.
 
 ## Troubleshooting
 

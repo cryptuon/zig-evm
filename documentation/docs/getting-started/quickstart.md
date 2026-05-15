@@ -253,48 +253,12 @@ Persistent storage operations:
 
 ## Parallel Execution
 
-Process multiple transactions in parallel:
-
-=== "Python"
-
-    ```python
-    from zigevm import BatchExecutor, BatchConfig, BatchTransaction
-
-    # Configure parallel execution
-    config = BatchConfig(
-        max_threads=8,
-        enable_parallel=True,
-        chain_id=1,
-        block_number=12345678,
-    )
-
-    executor = BatchExecutor(config)
-
-    # Set up accounts
-    for i in range(10):
-        executor.set_account(
-            address=f"0x{'%040x' % i}",
-            balance=100 * 10**18,
-            nonce=0,
-        )
-
-    # Create transactions
-    transactions = []
-    for i in range(100):
-        transactions.append(BatchTransaction(
-            from_addr=f"0x{'%040x' % (i % 10)}",
-            to_addr=f"0x{'%040x' % ((i + 1) % 10)}",
-            value=1 * 10**18,
-            gas_limit=21000,
-        ))
-
-    # Execute in parallel
-    stats = executor.execute(transactions)
-
-    print(f"Transactions: {stats.total_transactions}")
-    print(f"Parallel waves: {stats.parallel_waves}")
-    print(f"Throughput: {stats.total_transactions / (stats.execution_time_ns / 1e9):.0f} tx/s")
-    ```
+Parallel batch execution is exposed today through the **C ABI only**
+(`batch_create`, `batch_execute` in `include/zigevm.h`). The Python,
+Rust, and JavaScript wrappers do not yet surface it; see the
+[Parallel Execution guide](../user-guide/parallel-execution.md) and the
+[C FFI Reference](../api-reference/c-ffi.md) for details, and run
+`zig build parallel-opt` for the bundled Zig demo.
 
 ## Next Steps
 

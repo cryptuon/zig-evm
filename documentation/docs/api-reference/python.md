@@ -334,107 +334,14 @@ class Log:
 | `topics` | `list[bytes]` | 0-4 topics (32 bytes each) |
 | `data` | `bytes` | Log data |
 
-## BatchExecutor
+## Batch / Parallel Execution
 
-For parallel transaction execution.
-
-```python
-from zigevm import BatchExecutor, BatchConfig, BatchTransaction
-```
-
-### BatchConfig
-
-```python
-@dataclass
-class BatchConfig:
-    max_threads: int = 8
-    enable_parallel: bool = True
-    enable_speculation: bool = False
-    chain_id: int = 1
-    block_number: int = 0
-    block_timestamp: int = 0
-    block_gas_limit: int = 30000000
-    coinbase: str | bytes = None
-```
-
-### BatchTransaction
-
-```python
-@dataclass
-class BatchTransaction:
-    from_addr: str | bytes
-    to_addr: str | bytes = None
-    value: int | bytes = 0
-    data: bytes = b""
-    gas_limit: int = 21000
-    gas_price: int | bytes = 0
-    nonce: int = None
-```
-
-### BatchStats
-
-```python
-@dataclass
-class BatchStats:
-    total_transactions: int
-    successful_transactions: int
-    failed_transactions: int
-    reverted_transactions: int
-    total_gas_used: int
-    execution_time_ns: int
-    parallel_waves: int
-    max_parallelism: int
-```
-
-### Methods
-
-#### Constructor
-
-```python
-executor = BatchExecutor(config: BatchConfig)
-```
-
----
-
-#### set_account
-
-```python
-def set_account(self, address: str | bytes, balance: int = 0,
-                nonce: int = 0, code: bytes = None) -> None
-```
-
-Set account state.
-
----
-
-#### set_storage
-
-```python
-def set_storage(self, address: str | bytes,
-                key: int | bytes, value: int | bytes) -> None
-```
-
-Set storage slot.
-
----
-
-#### execute
-
-```python
-def execute(self, transactions: list[BatchTransaction]) -> BatchStats
-```
-
-Execute transactions in parallel.
-
----
-
-#### get_results
-
-```python
-def get_results(self) -> list[BatchResult]
-```
-
-Get individual transaction results.
+The Python wrapper (`bindings/python/zigevm/__init__.py`) only exposes
+`EVM`, `EVMResult`, `EVMError`, and `Log`. Batch execution is implemented
+in the C ABI (`batch_create`, `batch_execute`, etc. in `include/zigevm.h`)
+but is not yet surfaced through the Python bindings. To use parallel
+execution today, call the C ABI directly via `ctypes` or use the
+[C FFI Reference](c-ffi.md).
 
 ## Examples
 
@@ -502,51 +409,6 @@ for log in evm.get_logs():
 evm.destroy()
 ```
 
-### Parallel Execution
-
-```python
-from zigevm import BatchExecutor, BatchConfig, BatchTransaction
-
-config = BatchConfig(
-    max_threads=8,
-    enable_parallel=True,
-    chain_id=1,
-    block_number=12345678,
-)
-
-executor = BatchExecutor(config)
-
-# Set up accounts
-for i in range(10):
-    executor.set_account(
-        address=f"0x{'%040x' % i}",
-        balance=100 * 10**18,
-    )
-
-# Create transactions
-transactions = [
-    BatchTransaction(
-        from_addr=f"0x{'%040x' % (i % 10)}",
-        to_addr=f"0x{'%040x' % ((i + 1) % 10)}",
-        value=1 * 10**18,
-        gas_limit=21000,
-    )
-    for i in range(1000)
-]
-
-# Execute
-stats = executor.execute(transactions)
-
-print(f"Transactions: {stats.total_transactions}")
-print(f"Parallel waves: {stats.parallel_waves}")
-print(f"Speedup: {stats.max_parallelism}x")
-
-# Check results
-for result in executor.get_results():
-    if not result.success:
-        print(f"Tx {result.tx_index} failed: {result.error_code}")
-```
-
 ## Error Handling
 
 ```python
@@ -559,44 +421,30 @@ try:
     result = evm.execute(expensive_code)
 
     if not result.success:
-        if result.error_code == 1:  # OutOfGas
+        if result.error_code == EVMError.OUT_OF_GAS:
             print("Increase gas limit")
         elif result.reverted:
             print(f"Reverted: {result.return_data}")
         else:
-            print(f"Error: {result.error_name}")
+            print(f"Error: {result.error_code}")  # IntEnum, str() yields name
 except Exception as e:
     print(f"FFI error: {e}")
 finally:
     evm.destroy()
 ```
 
-## Address Formats
+## Address and Value Formats
 
-Addresses can be specified in multiple formats:
+The current Python wrapper expects:
 
-```python
-# Hex string with 0x prefix
-evm.set_address("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-
-# Hex string without 0x
-evm.set_address("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-
-# bytes
-evm.set_address(bytes.fromhex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
-```
-
-## Value Formats
-
-Values can be specified as:
+- **Addresses** as raw 20-byte `bytes` (use `bytes.fromhex("aaaa...")`)
+- **Balances / values** as Python `int` (converted to 32-byte big-endian internally)
+- **Storage keys / values** as 32-byte `bytes` (shorter values are left-padded
+  with zeros by `_to_bytes32`)
 
 ```python
-# Integer
-evm.set_balance(addr, 1000000)
-
-# Hex integer
-evm.set_balance(addr, 0x1000)
-
-# 32-byte bytes (big-endian)
-evm.set_balance(addr, b'\x00' * 31 + b'\x64')
+addr = bytes.fromhex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+evm.set_address(addr)
+evm.set_balance(addr, 10**18)  # 1 ETH
+evm.set_storage(addr, b"\x00" * 32, (42).to_bytes(32, "big"))
 ```

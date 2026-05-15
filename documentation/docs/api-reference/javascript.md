@@ -330,121 +330,13 @@ interface Log {
 | `topics` | `Buffer[]` | 0-4 topics (32 bytes each) |
 | `data` | `Buffer` | Log data |
 
-## BatchExecutor
+## Batch / Parallel Execution
 
-For parallel transaction execution.
-
-```javascript
-const { BatchExecutor } = require('zigevm');
-```
-
-### Constructor
-
-```typescript
-interface BatchExecutorConfig {
-    maxThreads?: number;
-    enableParallel?: boolean;
-    enableSpeculation?: boolean;
-    chainId?: bigint;
-    blockNumber?: bigint;
-    blockTimestamp?: bigint;
-    blockGasLimit?: bigint;
-    coinbase?: string | Buffer;
-}
-
-const executor = new BatchExecutor(config: BatchExecutorConfig);
-```
-
-### Methods
-
-#### setAccount
-
-```typescript
-setAccount(options: {
-    address: string | Buffer;
-    balance?: bigint;
-    nonce?: number;
-    code?: Buffer;
-}): void
-```
-
-Set account state.
-
----
-
-#### setStorage
-
-```typescript
-setStorage(address: string | Buffer,
-           key: number | bigint | string | Buffer,
-           value: number | bigint | string | Buffer): void
-```
-
-Set storage slot.
-
----
-
-#### execute
-
-```typescript
-execute(transactions: BatchTransaction[]): Promise<BatchStats>
-```
-
-Execute transactions in parallel.
-
----
-
-#### getResults
-
-```typescript
-getResults(): BatchResult[]
-```
-
-Get individual transaction results.
-
-### BatchTransaction
-
-```typescript
-interface BatchTransaction {
-    from: string | Buffer;
-    to?: string | Buffer;
-    value?: bigint;
-    data?: Buffer;
-    gasLimit?: bigint;
-    gasPrice?: bigint;
-    nonce?: number;
-}
-```
-
-### BatchStats
-
-```typescript
-interface BatchStats {
-    totalTransactions: number;
-    successfulTransactions: number;
-    failedTransactions: number;
-    revertedTransactions: number;
-    totalGasUsed: bigint;
-    executionTimeNs: bigint;
-    parallelWaves: number;
-    maxParallelism: number;
-}
-```
-
-### BatchResult
-
-```typescript
-interface BatchResult {
-    txIndex: number;
-    success: boolean;
-    reverted: boolean;
-    gasUsed: bigint;
-    returnData: Buffer;
-    errorCode: number;
-    logsCount: number;
-    createdAddress?: Buffer;
-}
-```
+The Node.js bindings (`bindings/js/lib/index.js`) currently export only
+`EVM`, `EVMError`, `ErrorNames`, and `version`. Batch execution is
+implemented in the C ABI (`batch_create`, `batch_execute`, etc. in
+`include/zigevm.h`) but is not yet wrapped in JavaScript. To drive
+parallel execution today, use the [C FFI](c-ffi.md) directly.
 
 ## Examples
 
@@ -510,49 +402,6 @@ for (const log of evm.getLogs()) {
 }
 
 evm.destroy();
-```
-
-### Parallel Execution
-
-```javascript
-const { BatchExecutor } = require('zigevm');
-
-const executor = new BatchExecutor({
-    maxThreads: 8,
-    enableParallel: true,
-    chainId: 1n,
-    blockNumber: 12345678n,
-});
-
-// Set up accounts
-for (let i = 0; i < 10; i++) {
-    executor.setAccount({
-        address: `0x${'00'.repeat(19)}${i.toString(16).padStart(2, '0')}`,
-        balance: 100n * 10n**18n,
-    });
-}
-
-// Create transactions
-const transactions = Array(1000).fill(null).map((_, i) => ({
-    from: `0x${'00'.repeat(19)}${(i % 10).toString(16).padStart(2, '0')}`,
-    to: `0x${'00'.repeat(19)}${((i + 1) % 10).toString(16).padStart(2, '0')}`,
-    value: 1n * 10n**18n,
-    gasLimit: 21000n,
-}));
-
-// Execute
-const stats = await executor.execute(transactions);
-
-console.log(`Transactions: ${stats.totalTransactions}`);
-console.log(`Parallel waves: ${stats.parallelWaves}`);
-console.log(`Speedup: ${stats.maxParallelism}x`);
-
-// Check results
-for (const result of executor.getResults()) {
-    if (!result.success) {
-        console.log(`Tx ${result.txIndex} failed: ${result.errorCode}`);
-    }
-}
 ```
 
 ### With ethers.js

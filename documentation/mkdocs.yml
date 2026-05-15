@@ -1,8 +1,9 @@
 site_name: Zig EVM Documentation
 site_description: High-performance, embeddable Ethereum Virtual Machine implementation in Zig
-site_url: https://cryptuon.github.io/zig-evm
+site_url: https://zig-evm.docs.cryptuon.com/
 repo_url: https://github.com/cryptuon/zig-evm
 repo_name: cryptuon/zig-evm
+edit_uri: edit/main/documentation/docs/
 
 theme:
   name: material

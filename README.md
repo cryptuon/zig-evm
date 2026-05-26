@@ -202,6 +202,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 
-- [Ethereum Yellow Paper](https://ethereum.github.io/yellowpaper/paper.pdf)
+- [Ethereum Yellow Paper](https://ethereum.github.io/yellowpaper/paper.pdf)(https://ethereum.github.io/yellowpaper/paper.pdf)
 - [EVM Opcodes Reference](https://www.evm.codes/)
 - [Zig Programming Language](https://ziglang.org/)

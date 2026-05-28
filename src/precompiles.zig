@@ -12,6 +12,9 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ourcrypto = @import("crypto.zig"); // Keccak-256 for address derivation
 const ripemd = @import("ripemd160.zig");
+const blake2f = @import("blake2f.zig");
+const bn254 = @import("bn254.zig");
+const bn254_pairing = @import("bn254_pairing.zig");
 
 pub const Result = struct { gas: u64, output: []u8 };
 
@@ -52,7 +55,34 @@ pub fn run(allocator: Allocator, addr: [20]u8, input: []const u8) !Result {
             break :blk Result{ .gas = 600 + 120 * words(input.len), .output = out };
         },
         0x05 => try modexp(allocator, input), // modular exponentiation
-        // 0x06/0x07/0x08 BN254 add/mul/pairing, 0x09 blake2f: not yet implemented.
+        0x06 => blk: { // BN254 ECADD (EIP-196 / EIP-1108 gas)
+            const out = try allocator.alloc(u8, 64);
+            errdefer allocator.free(out);
+            var fixed: [64]u8 = undefined;
+            try bn254.ecadd(input, &fixed);
+            @memcpy(out, &fixed);
+            break :blk Result{ .gas = 150, .output = out };
+        },
+        0x07 => blk: { // BN254 ECMUL (EIP-196 / EIP-1108 gas)
+            const out = try allocator.alloc(u8, 64);
+            errdefer allocator.free(out);
+            var fixed: [64]u8 = undefined;
+            try bn254.ecmul(input, &fixed);
+            @memcpy(out, &fixed);
+            break :blk Result{ .gas = 6000, .output = out };
+        },
+        0x08 => blk: { // BN254 pairing (EIP-197 / EIP-1108 gas)
+            const r = try bn254_pairing.ecpairing(allocator, input);
+            break :blk Result{ .gas = r.gas, .output = r.output };
+        },
+        0x09 => blk: { // blake2f compression (EIP-152)
+            const out = try allocator.alloc(u8, 64);
+            errdefer allocator.free(out);
+            var fixed: [64]u8 = undefined;
+            const rounds = try blake2f.precompile(input, &fixed);
+            @memcpy(out, &fixed);
+            break :blk Result{ .gas = @as(u64, rounds), .output = out };
+        },
         else => error.UnsupportedPrecompile,
     };
 }
@@ -322,11 +352,65 @@ test "precompile: identity copies input with correct gas" {
     try testing.expectEqual(@as(u64, 15 + 3), r.gas); // 13 bytes -> 1 word
 }
 
-test "precompile: unimplemented ones report unsupported" {
+test "precompile: every reachable address (0x01..0x09) is now implemented" {
+    // 0x0A and above are not precompile addresses, so the dispatcher never
+    // reaches them. All addresses in [0x01..0x09] are now wired.
+    try testing.expect(!isPrecompile(precompileAddr(10)));
+}
+
+test "precompile: ECPAIRING reports empty input as 1 (identity)" {
     const a = testing.allocator;
-    try testing.expectError(error.UnsupportedPrecompile, run(a, precompileAddr(6), "")); // bn254 add
-    try testing.expectError(error.UnsupportedPrecompile, run(a, precompileAddr(8), "")); // bn254 pairing
-    try testing.expectError(error.UnsupportedPrecompile, run(a, precompileAddr(9), "")); // blake2f
+    const r = try run(a, precompileAddr(8), "");
+    defer a.free(r.output);
+    try testing.expectEqual(@as(usize, 32), r.output.len);
+    try testing.expectEqual(@as(u8, 1), r.output[31]);
+    try testing.expectEqual(@as(u64, 45_000), r.gas);
+}
+
+test "precompile: ECADD computes G + G = 2G (EIP-196 vector)" {
+    const a = testing.allocator;
+    var input: [128]u8 = [_]u8{0} ** 128;
+    input[31] = 1; input[63] = 2; input[95] = 1; input[127] = 2;
+    const r = try run(a, precompileAddr(6), &input);
+    defer a.free(r.output);
+    try testing.expectEqual(@as(u64, 150), r.gas);
+    var expected_x: [32]u8 = undefined;
+    _ = try std.fmt.hexToBytes(&expected_x, "030644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd3");
+    try testing.expectEqualSlices(u8, &expected_x, r.output[0..32]);
+}
+
+test "precompile: ECMUL computes G * 2 = 2G (EIP-196 vector)" {
+    const a = testing.allocator;
+    var input: [96]u8 = [_]u8{0} ** 96;
+    input[31] = 1; input[63] = 2; input[95] = 2;
+    const r = try run(a, precompileAddr(7), &input);
+    defer a.free(r.output);
+    try testing.expectEqual(@as(u64, 6000), r.gas);
+    var expected_y: [32]u8 = undefined;
+    _ = try std.fmt.hexToBytes(&expected_y, "15ed738c0e0a7c92e7845f96b2ae9c0a68a6a449e3538fc7ff3ebf7a5a18a2c4");
+    try testing.expectEqualSlices(u8, &expected_y, r.output[32..64]);
+}
+
+test "precompile: blake2f compresses the EIP-152 canonical input" {
+    const a = testing.allocator;
+    var input: [213]u8 = undefined;
+    _ = try std.fmt.hexToBytes(input[0..4], "0000000c");
+    _ = try std.fmt.hexToBytes(input[4..68],
+        "48c9bdf267e6096a3ba7ca8485ae67bb2bf894fe72f36e3cf1361d5f3af54fa5" ++
+        "d182e6ad7f520e511f6c3e2b8c68059b6bbd41fbabd9831f79217e1319cde05b");
+    @memset(input[68..196], 0);
+    input[68] = 0x61; input[69] = 0x62; input[70] = 0x63;
+    @memset(input[196..212], 0);
+    input[196] = 0x03;
+    input[212] = 0x01;
+    const r = try run(a, precompileAddr(9), &input);
+    defer a.free(r.output);
+    try testing.expectEqual(@as(u64, 12), r.gas);
+    var expected: [64]u8 = undefined;
+    _ = try std.fmt.hexToBytes(&expected,
+        "ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d1" ++
+        "7d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923");
+    try testing.expectEqualSlices(u8, &expected, r.output);
 }
 
 test "precompile: ripemd160 hashes 'abc' with left-padded output" {

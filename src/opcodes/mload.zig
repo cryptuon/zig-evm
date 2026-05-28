@@ -20,21 +20,11 @@ fn execute(evm: *EVM) !void {
         // Convert BigInt offset to usize (only use least significant word for simplicity)
         const offset = @as(usize, @intCast(offset_bigint.data[0]));
 
-        // Load 32 bytes from memory
+        // Load 32 bytes from memory and interpret big-endian (matches fromBytes
+        // used elsewhere, and MSTORE's layout).
         const word_bytes = try evm.memory.loadWord(evm.allocator, offset);
-
-        // Convert bytes to BigInt (big-endian)
-        var result = BigInt{ .data = .{ 0, 0, 0, 0 } };
-        for (0..32) |i| {
-            const byte_val = word_bytes[i];
-            const word_idx = i / 8; // Which u64 word (0-3)
-            const byte_idx = i % 8; // Which byte within the word (0-7)
-
-            // Shift byte into correct position (big-endian)
-            const shift = @as(u6, @intCast(56 - (byte_idx * 8)));
-            result.data[word_idx] |= @as(u64, byte_val) << shift;
-        }
-
-        try evm.stack.push(evm.allocator, result);
+        var buf: [32]u8 = undefined;
+        @memcpy(&buf, word_bytes[0..32]);
+        try evm.stack.push(evm.allocator, BigInt.fromBytes(buf));
     } else return error.StackUnderflow;
 }

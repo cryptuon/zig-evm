@@ -16,30 +16,20 @@ pub fn getImpl() struct { code: u8, impl: OpcodeImpl } {
 }
 
 fn execute(evm: *EVM) !void {
-    // Pop address from stack
+    // Pop address from stack. An address is the low 20 bytes of the 256-bit
+    // word, big-endian (matching EXTCODESIZE/CALL and the rest of the EVM).
     if (evm.stack.pop()) |address_bigint| {
-        // Convert BigInt to 20-byte address
-        var address: [20]u8 = [_]u8{0} ** 20;
+        const addr_bytes = address_bigint.toBytes();
+        var address: [20]u8 = undefined;
+        @memcpy(&address, addr_bytes[12..32]);
 
-        // Extract address from BigInt (reverse the encoding)
-        for (0..20) |i| {
-            const bit_pos = i * 8;
-            const word_idx = bit_pos / 64;
-            const bit_in_word = bit_pos % 64;
+        // EIP-2929: 2600 gas if the account is cold this tx, else 100.
+        const cold = try evm.accessAccount(address);
+        try evm.consumeGas(if (cold) EVM.COLD_ACCOUNT_ACCESS_COST else EVM.WARM_STORAGE_READ_COST);
 
-            if (word_idx < 4) {
-                const word_val = address_bigint.data[word_idx];
-                address[i] = @intCast((word_val >> @intCast(bit_in_word)) & 0xFF);
-            }
-        }
-
-        // Look up account balance
-        if (evm.accounts.get(address)) |account| {
-            try evm.stack.push(evm.allocator, account.balance);
-        } else {
-            // Account doesn't exist, balance is 0
-            try evm.stack.push(evm.allocator, BigInt.init(0));
-        }
+        // Look up account balance through the recording helper.
+        const bal = try evm.loadBalance(address);
+        try evm.stack.push(evm.allocator, bal);
     } else {
         return error.StackUnderflow;
     }

@@ -24,4 +24,9 @@ comptime {
     _ = @import("tests/test_storage.zig");
     _ = @import("tests/eth_compliance.zig");
     _ = @import("tests/eth_test_loader.zig");
+
+    // Serializable parallel-execution engine (Block-STM foundations)
+    _ = @import("src/state_key.zig");
+    _ = @import("src/mvcc.zig");
+    _ = @import("src/access_set.zig");
 }

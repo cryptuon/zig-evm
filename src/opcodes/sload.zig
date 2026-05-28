@@ -22,13 +22,12 @@ fn execute(evm: *EVM) !void {
     // Pop the storage key from stack
     const key = evm.stack.pop() orelse return error.StackUnderflow;
 
-    // Get the current contract's account
-    if (evm.accounts.getPtr(evm.current_address)) |account| {
-        // Look up the value in storage
-        const value = account.storage.get(key) orelse BigInt.zero();
-        try evm.stack.push(evm.allocator, value);
-    } else {
-        // Account doesn't exist, return 0
-        try evm.stack.push(evm.allocator, BigInt.zero());
-    }
+    // EIP-2929: 2100 gas if this slot is cold (first access this tx), else 100.
+    const cold = try evm.accessSlot(evm.current_address, key);
+    try evm.consumeGas(if (cold) EVM.COLD_SLOAD_COST else EVM.WARM_STORAGE_READ_COST);
+
+    // Read through the recording helper so the access is captured in the
+    // transaction's read set when an AccessRecorder is attached.
+    const value = try evm.loadStorage(evm.current_address, key);
+    try evm.stack.push(evm.allocator, value);
 }

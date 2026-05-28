@@ -9,6 +9,11 @@ pub const Memory = @import("memory.zig").Memory;
 pub const Stack = @import("stack.zig").Stack;
 pub const CallStack = @import("call_frame.zig").CallStack;
 pub const CallFrame = @import("call_frame.zig").CallFrame;
+pub const AccessRecorder = @import("access_set.zig").AccessRecorder;
+pub const StateKey = @import("state_key.zig").StateKey;
+pub const StateKeyHashMap = @import("state_key.zig").StateKeyHashMap;
+pub const VmView = @import("block_stm.zig").VmView;
+const crypto = @import("crypto.zig");
 
 pub const Opcode = enum(u8) {
     STOP = 0x00,
@@ -210,6 +215,15 @@ pub const Log = struct {
 };
 
 pub const EVM = struct {
+    // EIP-2929 access-list gas constants.
+    pub const COLD_SLOAD_COST: u64 = 2100;
+    pub const WARM_STORAGE_READ_COST: u64 = 100;
+    pub const COLD_ACCOUNT_ACCESS_COST: u64 = 2600;
+    // EIP-2200 / EIP-2929 / EIP-3529 SSTORE constants.
+    pub const SSTORE_SET_GAS: u64 = 20000;
+    pub const SSTORE_RESET_GAS: u64 = 2900; // 5000 - COLD_SLOAD_COST (EIP-2929)
+    pub const SSTORE_CLEARS_SCHEDULE: i64 = 4800; // EIP-3529
+
     allocator: Allocator,
     stack: Stack,
     memory: Memory,
@@ -255,6 +269,40 @@ pub const EVM = struct {
     // Call stack for nested calls
     call_stack: CallStack,
 
+    // Optional dynamic access recorder. When non-null, the state-access helpers
+    // below log every storage/balance/nonce key read or written, yielding the
+    // per-transaction read/write set used to build the block conflict graph for
+    // the serializable parallel-execution engine. Null during ordinary
+    // single-threaded execution (zero overhead).
+    access: ?*AccessRecorder,
+
+    // Optional multi-version view. When non-null, the state-access helpers read
+    // and write through the Block-STM `VmView` (versioned store + read/write-set
+    // recording + base-state fallback) instead of the flat `accounts` map, so
+    // the same opcode code runs unchanged under parallel block execution.
+    view: ?*VmView,
+
+    // EIP-2929 per-transaction access list (the "warm set"). An address or
+    // storage slot is cold on first touch in a transaction and warm thereafter,
+    // which sets the access gas cost. Note this set is the same object the
+    // engine records as the transaction's read/write set — the protocol's access
+    // list and our conflict-tracking access set coincide.
+    warm_accounts: std.AutoHashMap([20]u8, void),
+    warm_slots: StateKeyHashMap(void),
+
+    // EIP-2200: the value each storage slot held at the start of the current
+    // transaction (captured on first SSTORE), needed to price net changes; and
+    // the EIP-3529 gas-refund accumulator (applied, capped, at tx end).
+    original_values: StateKeyHashMap(BigInt),
+    gas_refund: i64,
+
+    // Revert journal: (key, prior value) for every storage/balance write, so a
+    // reverted call frame can restore the state it touched. A frame records the
+    // journal length on entry and unwinds back to it on revert.
+    journal: std.ArrayListUnmanaged(JournalEntry),
+
+    pub const JournalEntry = struct { key: StateKey, old: BigInt };
+
     pub fn init(allocator: Allocator) !*EVM {
         var evm = try allocator.create(EVM);
         evm.* = EVM{
@@ -290,6 +338,13 @@ pub const EVM = struct {
             .block_hashes = std.AutoHashMap(u64, [32]u8).init(allocator),
             .logs = std.array_list.Managed(Log).init(allocator),
             .call_stack = CallStack.init(allocator),
+            .access = null,
+            .view = null,
+            .warm_accounts = std.AutoHashMap([20]u8, void).init(allocator),
+            .warm_slots = StateKeyHashMap(void).init(allocator),
+            .original_values = StateKeyHashMap(BigInt).init(allocator),
+            .gas_refund = 0,
+            .journal = .{},
         };
         try evm.loadOpcodes();
         return evm;
@@ -299,6 +354,112 @@ pub const EVM = struct {
         self.gas_limit = gas_limit;
         self.gas = gas_limit;
         self.gas_used = 0;
+    }
+
+    /// Reset transient execution state (stack, memory, pc, gas, flags) so the
+    /// instance can run another transaction's bytecode. Used by the parallel
+    /// block executor, which reuses one EVM per worker across (re-)executions.
+    /// Persistent state (`accounts`) and the attached `view` are left intact.
+    pub fn resetForExecution(self: *EVM, code: []const u8, current_address: [20]u8, gas: u64) void {
+        self.stack.items.clearRetainingCapacity();
+        self.memory.data.clearRetainingCapacity();
+        self.pc = 0;
+        self.gas = gas;
+        self.gas_limit = gas;
+        self.gas_used = 0;
+        self.stop_execution = false;
+        self.execution_reverted = false;
+        self.return_data = &[_]u8{};
+        self.code = code;
+        self.current_address = current_address;
+        // EIP-2929: fresh access list per transaction. The executing account is
+        // pre-warmed (as the tx target would be); its storage slots start cold.
+        self.warm_accounts.clearRetainingCapacity();
+        self.warm_slots.clearRetainingCapacity();
+        self.original_values.clearRetainingCapacity();
+        self.gas_refund = 0;
+        self.journal.clearRetainingCapacity();
+        self.warm_accounts.put(current_address, {}) catch {};
+    }
+
+    /// Read the current value of a word-valued (storage/balance) key without
+    /// recording an access — used to capture the pre-write value for the journal.
+    fn peekState(self: *EVM, key: StateKey) BigInt {
+        if (self.view) |v| return v.peek(key);
+        switch (key.tag) {
+            .storage => {
+                if (self.accounts.getPtr(key.address)) |acct| {
+                    return acct.storage.get(key.slot) orelse BigInt.zero();
+                }
+                return BigInt.zero();
+            },
+            .balance => {
+                if (self.accounts.get(key.address)) |acct| return acct.balance;
+                return BigInt.zero();
+            },
+            else => return BigInt.zero(),
+        }
+    }
+
+    /// Restore the value of `key` to `value` directly (used when unwinding the
+    /// journal on revert); does not itself journal.
+    fn restoreState(self: *EVM, key: StateKey, value: BigInt) void {
+        if (self.view) |v| {
+            v.write(key, value) catch {};
+            return;
+        }
+        switch (key.tag) {
+            .storage => {
+                const acct = self.getOrCreateAccount(key.address) catch return;
+                if (value.isZero()) {
+                    _ = acct.storage.remove(key.slot);
+                } else {
+                    acct.storage.put(key.slot, value) catch {};
+                }
+            },
+            .balance => {
+                const acct = self.getOrCreateAccount(key.address) catch return;
+                acct.balance = value;
+            },
+            else => {},
+        }
+    }
+
+    /// Unwind the journal back to `marker`, restoring each touched key to its
+    /// prior value (highest index first, so the earliest prior value wins).
+    pub fn revertTo(self: *EVM, marker: usize) void {
+        var i = self.journal.items.len;
+        while (i > marker) {
+            i -= 1;
+            const e = self.journal.items[i];
+            self.restoreState(e.key, e.old);
+        }
+        self.journal.shrinkRetainingCapacity(marker);
+    }
+
+    /// EIP-2200: return the storage slot's value at the start of this
+    /// transaction, capturing it on first SSTORE. `current` is the value read
+    /// immediately before the write; on the first SSTORE for a slot it equals
+    /// the pre-transaction value (no earlier write this tx), so caching it gives
+    /// the original for all subsequent SSTOREs.
+    pub fn captureOriginal(self: *EVM, address: [20]u8, slot: BigInt, current: BigInt) !BigInt {
+        const gop = try self.original_values.getOrPut(StateKey.storageOf(address, slot));
+        if (!gop.found_existing) gop.value_ptr.* = current;
+        return gop.value_ptr.*;
+    }
+
+    /// EIP-2929: record access to an account, returning whether it was *cold*
+    /// (not previously accessed in this transaction). Marks it warm.
+    pub fn accessAccount(self: *EVM, address: [20]u8) !bool {
+        const gop = try self.warm_accounts.getOrPut(address);
+        return !gop.found_existing;
+    }
+
+    /// EIP-2929: record access to a storage slot, returning whether it was
+    /// *cold*. Marks it warm.
+    pub fn accessSlot(self: *EVM, address: [20]u8, slot: BigInt) !bool {
+        const gop = try self.warm_slots.getOrPut(StateKey.storageOf(address, slot));
+        return !gop.found_existing;
     }
 
     pub fn getGasCost(opcode: Opcode) u64 {
@@ -322,7 +483,8 @@ pub const EVM = struct {
             // Environmental operations
             .ADDRESS, .ORIGIN, .CALLER, .GASPRICE, .TIMESTAMP, .NUMBER,
             .DIFFICULTY, .GASLIMIT, .CHAINID, .BASEFEE => 2,
-            .BALANCE => 100, // Account access cost
+            .BALANCE => 0, // EIP-2929 cold/warm cost charged in-opcode
+            .EXTCODESIZE, .EXTCODEHASH, .EXTCODECOPY => 0, // EIP-2929 account access charged in-opcode
             .SELFBALANCE => 5,
 
             // Stack operations
@@ -342,9 +504,9 @@ pub const EVM = struct {
             .MLOAD, .MSTORE, .MSTORE8 => 3,
             .MSIZE => 2,
 
-            // Storage operations (high cost)
-            .SLOAD => 200,
-            .SSTORE => 5000, // Base cost, varies based on storage state
+            // Storage operations
+            .SLOAD => 0, // EIP-2929 cold/warm cost charged in-opcode
+            .SSTORE => 0, // EIP-2929/2200/3529 cost charged in-opcode
 
             // Flow control
             .JUMP => 8,
@@ -378,6 +540,13 @@ pub const EVM = struct {
         self.stack.deinit(self.allocator);
         self.memory.deinit(self.allocator);
         self.opcodes.deinit();
+        // Each account owns a storage hash map and (when non-empty) an
+        // allocator-owned code buffer; free both before the accounts map.
+        var account_it = self.accounts.valueIterator();
+        while (account_it.next()) |account| {
+            account.storage.deinit();
+            if (account.code.len > 0) self.allocator.free(account.code);
+        }
         self.accounts.deinit();
         self.block_hashes.deinit();
         // Clean up logs
@@ -386,6 +555,13 @@ pub const EVM = struct {
         }
         self.logs.deinit();
         self.call_stack.deinit();
+        self.warm_accounts.deinit();
+        self.warm_slots.deinit();
+        self.original_values.deinit();
+        self.journal.deinit(self.allocator);
+        // return_data, when non-empty, is an allocator-owned buffer (RETURN /
+        // REVERT / CALL); the empty default is a static slice.
+        if (self.return_data.len > 0) self.allocator.free(self.return_data);
         self.allocator.destroy(self);
     }
 
@@ -901,6 +1077,70 @@ pub const EVM = struct {
         }
     }
 
+    /// Execute a complete top-level transaction against the current world
+    /// state: intrinsic gas, nonce bump, value transfer, then either contract
+    /// execution (callee with code) or contract creation (to == null), with the
+    /// EIP-3529 refund applied at the end. Returns whether the transaction
+    /// succeeded. This is the entry point a block replay harness drives.
+    pub fn executeTransaction(self: *EVM, tx: Transaction) !bool {
+        self.resetForExecution(&[_]u8{}, tx.from, tx.gas_limit);
+        self.origin_address = tx.from;
+        self.caller_address = tx.from;
+        self.call_value = tx.value;
+
+        // Intrinsic gas (base; calldata/access-list costs omitted for now).
+        try self.consumeGas(21000);
+
+        const from_bal = try self.loadBalance(tx.from);
+        if (from_bal.lt(tx.value)) return error.InsufficientBalance;
+
+        const sender_nonce: u64 = if (self.accounts.get(tx.from)) |a| a.nonce else 0;
+        if (self.accounts.getPtr(tx.from)) |a| a.nonce += 1;
+
+        if (tx.to) |to_addr| {
+            if (!tx.value.isZero()) {
+                try self.storeBalance(tx.from, from_bal.sub(tx.value));
+                const tb = try self.loadBalance(to_addr);
+                try self.storeBalance(to_addr, tb.add(tx.value));
+            }
+            _ = try self.accessAccount(to_addr);
+            const code = if (self.accounts.get(to_addr)) |acc| acc.code else &[_]u8{};
+            if (code.len == 0) {
+                self.applyRefund();
+                return true; // plain value transfer
+            }
+            const ok = try self.runSubContext(code, to_addr, tx.from, tx.value, tx.data, false, self.gas);
+            self.applyRefund();
+            return ok;
+        }
+
+        // Contract-creation transaction: run tx.data as init code at the
+        // CREATE address and adopt its RETURN data as the deployed code.
+        const new_address = crypto.createAddress(tx.from, sender_nonce);
+        if (!self.accounts.contains(new_address)) {
+            try self.accounts.put(new_address, .{
+                .balance = BigInt.zero(),
+                .nonce = 0,
+                .code = &[_]u8{},
+                .storage = std.AutoHashMap(BigInt, BigInt).init(self.allocator),
+            });
+        }
+        if (!tx.value.isZero()) {
+            try self.storeBalance(tx.from, from_bal.sub(tx.value));
+            const nb = try self.loadBalance(new_address);
+            try self.storeBalance(new_address, nb.add(tx.value));
+        }
+        const ok = try self.runSubContext(tx.data, new_address, tx.from, tx.value, &[_]u8{}, false, self.gas);
+        if (ok) {
+            if (self.accounts.getPtr(new_address)) |acct| {
+                if (acct.code.len > 0) self.allocator.free(acct.code);
+                acct.code = try self.allocator.dupe(u8, self.return_data);
+            }
+        }
+        self.applyRefund();
+        return ok;
+    }
+
     fn getOrCreateAccount(self: *EVM, address: [20]u8) !*Account {
         if (self.accounts.getPtr(address)) |account| {
             return account;
@@ -914,6 +1154,191 @@ pub const EVM = struct {
             try self.accounts.put(address, new_account);
             return self.accounts.getPtr(address).?;
         }
+    }
+
+    // ============================================================
+    // Recording state-access helpers
+    //
+    // All state-touching opcodes route through these so that, when an
+    // AccessRecorder is attached, the transaction's read/write set is captured
+    // at storage-slot granularity. The state semantics are identical to the
+    // direct map access they replace; the only addition is the recording.
+    // ============================================================
+
+    /// SLOAD-style read of a storage slot. Records a read of
+    /// storage(address, slot); returns zero for absent slots/accounts.
+    pub fn loadStorage(self: *EVM, address: [20]u8, slot: BigInt) !BigInt {
+        if (self.view) |v| return try v.read(StateKey.storageOf(address, slot));
+        if (self.access) |rec| try rec.recordRead(StateKey.storageOf(address, slot));
+        if (self.accounts.getPtr(address)) |account| {
+            return account.storage.get(slot) orelse BigInt.zero();
+        }
+        return BigInt.zero();
+    }
+
+    /// SSTORE-style write of a storage slot. Records a write of
+    /// storage(address, slot). Writing zero clears the slot, matching the
+    /// previous SSTORE behaviour.
+    pub fn storeStorage(self: *EVM, address: [20]u8, slot: BigInt, value: BigInt) !void {
+        const key = StateKey.storageOf(address, slot);
+        try self.journal.append(self.allocator, .{ .key = key, .old = self.peekState(key) });
+        if (self.view) |v| {
+            try v.write(key, value);
+            return;
+        }
+        if (self.access) |rec| try rec.recordWrite(key);
+        const account = try self.getOrCreateAccount(address);
+        if (value.isZero()) {
+            _ = account.storage.remove(slot);
+        } else {
+            try account.storage.put(slot, value);
+        }
+    }
+
+    /// BALANCE/SELFBALANCE-style read. Records a read of balance(address).
+    pub fn loadBalance(self: *EVM, address: [20]u8) !BigInt {
+        if (self.view) |v| return try v.read(StateKey.balanceOf(address));
+        if (self.access) |rec| try rec.recordRead(StateKey.balanceOf(address));
+        if (self.accounts.get(address)) |account| return account.balance;
+        return BigInt.init(0);
+    }
+
+    /// Set an account balance (e.g. a CALL value transfer). Records a write of
+    /// balance(address) and routes through the versioned view when attached, so
+    /// value transfers are serializable under parallel execution.
+    pub fn storeBalance(self: *EVM, address: [20]u8, value: BigInt) !void {
+        const key = StateKey.balanceOf(address);
+        try self.journal.append(self.allocator, .{ .key = key, .old = self.peekState(key) });
+        if (self.view) |v| {
+            try v.write(key, value);
+            return;
+        }
+        if (self.access) |rec| try rec.recordWrite(key);
+        const account = try self.getOrCreateAccount(address);
+        account.balance = value;
+    }
+
+    /// Record a read of `key` whose value is read from `accounts` directly
+    /// (account code/existence). Routes to the view's read set or the recorder.
+    pub fn noteRead(self: *EVM, key: StateKey) !void {
+        if (self.view) |v| {
+            try v.recordReadKey(key);
+        } else if (self.access) |rec| {
+            try rec.recordRead(key);
+        }
+    }
+
+    /// Record a write of `key` whose value is tracked elsewhere.
+    pub fn noteWrite(self: *EVM, key: StateKey) !void {
+        if (self.view) |v| {
+            try v.recordWriteKey(key);
+        } else if (self.access) |rec| {
+            try rec.recordWrite(key);
+        }
+    }
+
+    /// Apply the EIP-3529 gas refund at the end of a transaction: refund up to
+    /// gas_used/5, moving it back from gas_used to remaining gas.
+    pub fn applyRefund(self: *EVM) void {
+        const cap = self.gas_used / 5;
+        const refund: u64 = if (self.gas_refund <= 0) 0 else @intCast(self.gas_refund);
+        const applied = @min(refund, cap);
+        self.gas_used -= applied;
+        self.gas += applied;
+    }
+
+    /// Execute `code` in a nested call frame: a fresh stack and memory, the
+    /// given address/caller/value/calldata, sharing the same world state, gas
+    /// counter, access list, and access recorder as the parent (so sub-call
+    /// state accesses are recorded under the same transaction). Returns whether
+    /// the sub-call succeeded (false on revert or error). On return,
+    /// `self.return_data` holds the sub-call's output.
+    ///
+    /// State changes are NOT yet journaled, so a reverted sub-call's writes are
+    /// not rolled back — a known limitation tracked for the E1 milestone.
+    pub fn runSubContext(
+        self: *EVM,
+        code: []const u8,
+        address: [20]u8,
+        caller: [20]u8,
+        value: BigInt,
+        calldata: []const u8,
+        is_static: bool,
+        gas_limit: u64,
+    ) !bool {
+        if (self.call_stack.depth() >= CallStack.MAX_CALL_DEPTH) return false;
+        const frame = CallFrame.init(caller, address, address, self.origin_address, value, calldata, self.gas, code, is_static, false, false, @intCast(self.call_stack.depth()));
+        self.call_stack.push(frame) catch return false;
+
+        // Snapshot points to undo on revert: the state journal and the refund
+        // accumulator are rolled back; the EIP-2929 access list is not (warm
+        // stays warm across reverts).
+        const journal_marker = self.journal.items.len;
+        const refund_marker = self.gas_refund;
+
+        // Gas forwarding: the sub-call runs against a budget (caller already
+        // applied the 63/64 reservation + stipend); the reserved remainder is
+        // withheld and returned to the parent afterwards, along with any unused
+        // sub-call gas.
+        const budget = @min(gas_limit, self.gas);
+        const reserved = self.gas - budget;
+        self.gas = budget;
+
+        // Save the parent execution context.
+        const saved_stack = self.stack;
+        const saved_memory = self.memory;
+        const saved_pc = self.pc;
+        const saved_code = self.code;
+        const saved_addr = self.current_address;
+        const saved_caller = self.caller_address;
+        const saved_value = self.call_value;
+        const saved_calldata = self.calldata;
+        const saved_reverted = self.execution_reverted;
+
+        // Install the sub-frame: own stack/memory; clear prior return data so a
+        // sub-call that STOPs (no RETURN) yields empty output.
+        if (self.return_data.len > 0) self.allocator.free(self.return_data);
+        self.return_data = &[_]u8{};
+        self.stack = Stack.init(self.allocator);
+        self.memory = Memory.init(self.allocator);
+        self.code = code;
+        self.calldata = calldata;
+        self.current_address = address;
+        self.caller_address = caller;
+        self.call_value = value;
+        self.pc = 0;
+        self.execution_reverted = false;
+
+        var ok = true;
+        self.execute() catch {
+            ok = false;
+        };
+        if (self.execution_reverted) ok = false;
+
+        // On failure, undo this frame's state changes and refund accrual.
+        if (!ok) {
+            self.revertTo(journal_marker);
+            self.gas_refund = refund_marker;
+        }
+
+        // Return the reserved gas plus whatever the sub-call left unspent.
+        self.gas = reserved + self.gas;
+
+        // Tear down the sub-frame and restore the parent.
+        self.stack.deinit(self.allocator);
+        self.memory.deinit(self.allocator);
+        self.stack = saved_stack;
+        self.memory = saved_memory;
+        self.pc = saved_pc;
+        self.code = saved_code;
+        self.current_address = saved_addr;
+        self.caller_address = saved_caller;
+        self.call_value = saved_value;
+        self.calldata = saved_calldata;
+        self.execution_reverted = saved_reverted;
+        self.stop_execution = false;
+        _ = self.call_stack.pop();
+        return ok;
     }
 };
 

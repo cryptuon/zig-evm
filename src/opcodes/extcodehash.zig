@@ -10,6 +10,7 @@ const EVM = @import("../main.zig").EVM;
 const OpcodeImpl = @import("../main.zig").OpcodeImpl;
 const Opcode = @import("../main.zig").Opcode;
 const BigInt = @import("../main.zig").BigInt;
+const StateKey = @import("../main.zig").StateKey;
 const crypto = @import("../crypto.zig");
 
 // keccak256("") - empty code hash constant
@@ -36,6 +37,11 @@ fn execute(evm: *EVM) !void {
     const addr_bytes = addr_big.toBytes();
     var address: [20]u8 = undefined;
     @memcpy(&address, addr_bytes[12..32]);
+
+    // EIP-2929 account access (2600 cold / 100 warm) + record the code read.
+    const cold = try evm.accessAccount(address);
+    try evm.consumeGas(if (cold) EVM.COLD_ACCOUNT_ACCESS_COST else EVM.WARM_STORAGE_READ_COST);
+    try evm.noteRead(StateKey.codeOf(address));
 
     // Look up account
     if (evm.accounts.get(address)) |account| {

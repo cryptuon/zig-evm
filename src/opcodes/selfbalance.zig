@@ -16,11 +16,7 @@ pub fn getImpl() struct { code: u8, impl: OpcodeImpl } {
 }
 
 fn execute(evm: *EVM) !void {
-    // Push the balance of the current contract address onto the stack
-    if (evm.accounts.get(evm.current_address)) |account| {
-        try evm.stack.push(evm.allocator, account.balance);
-    } else {
-        // Current contract doesn't exist, balance is 0
-        try evm.stack.push(evm.allocator, BigInt.init(0));
-    }
+    // Push the balance of the current contract address, recording the read.
+    const bal = try evm.loadBalance(evm.current_address);
+    try evm.stack.push(evm.allocator, bal);
 }

@@ -222,4 +222,75 @@ pub fn build(b: *std.Build) void {
     const run_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_tests.step);
+
+    // Serializable parallel-execution engine tests (Block-STM foundations).
+    // Kept separate from `test` because the legacy compliance suite has not
+    // yet been migrated to the Zig 0.15.x stdlib API.
+    const engine_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test_engine.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_engine_tests = b.addRunArtifact(engine_tests);
+    const engine_test_step = b.step("engine-test", "Run serializable parallel-execution engine tests");
+    engine_test_step.dependOn(&run_engine_tests.step);
+
+    // Integration test: real EVM bytecode populates the dynamic read/write set.
+    // Rooted at the EVM (via main.zig), so it transitively compiles the whole
+    // interpreter; filtered to the access-recording tests so the pre-existing
+    // failing crypto tests (broken keccak256) are not executed here.
+    const recording_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("test_recording.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+        .filters = &.{ "access-recording", "eip2929", "replay", "state_test" },
+    });
+    const run_recording_tests = b.addRunArtifact(recording_tests);
+    const recording_test_step = b.step("recording-test", "Run dynamic read/write-set recording integration tests");
+    recording_test_step.dependOn(&run_recording_tests.step);
+
+    // Demo: the C2 conflict-granularity measurement on a synthetic block.
+    const parallel_report_exe = b.addExecutable(.{
+        .name = "parallelism-report",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/parallelism_report.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_parallel_report = b.addRunArtifact(parallel_report_exe);
+    const parallel_report_step = b.step("parallel-report", "Run the synthetic parallelism/contention report");
+    parallel_report_step.dependOn(&run_parallel_report.step);
+
+    // CLI: conflict-granularity report over a real block access-trace JSON.
+    const trace_report_exe = b.addExecutable(.{
+        .name = "trace-report",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/trace_report.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_trace_report = b.addRunArtifact(trace_report_exe);
+    if (b.args) |cli_args| run_trace_report.addArgs(cli_args);
+    const trace_report_step = b.step("trace-report", "Report parallelism over a block access-trace JSON (pass -- <file>)");
+    trace_report_step.dependOn(&run_trace_report.step);
+
+    // CLI: offline state-test replay/conformance harness.
+    const state_test_exe = b.addExecutable(.{
+        .name = "state-test",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/state_test_cli.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    const run_state_test = b.addRunArtifact(state_test_exe);
+    if (b.args) |cli_args| run_state_test.addArgs(cli_args);
+    const state_test_step = b.step("state-test", "Replay a JSON state test and check post-state (pass -- <file>)");
+    state_test_step.dependOn(&run_state_test.step);
 }

@@ -8,6 +8,7 @@ const EVM = @import("../main.zig").EVM;
 const OpcodeImpl = @import("../main.zig").OpcodeImpl;
 const Opcode = @import("../main.zig").Opcode;
 const BigInt = @import("../main.zig").BigInt;
+const StateKey = @import("../main.zig").StateKey;
 
 // Gas costs
 const CALL_BASE_GAS: u64 = 100;
@@ -63,53 +64,44 @@ fn execute(evm: *EVM) !void {
         return;
     }
 
-    // Get caller account (we're using caller's storage)
-    const caller_ptr = evm.accounts.getPtr(evm.current_address);
-    if (caller_ptr == null) {
-        try evm.stack.push(evm.allocator, BigInt.zero());
-        return;
-    }
-    const caller = caller_ptr.?;
-
-    // Check balance for value transfer
-    if (caller.balance.lt(value_big)) {
+    // Sufficient balance for the (to-self) value is required.
+    const self_bal = try evm.loadBalance(evm.current_address);
+    if (self_bal.lt(value_big)) {
         try evm.stack.push(evm.allocator, BigInt.zero());
         return;
     }
 
-    // Read calldata from memory
-    try evm.memory.ensureCapacity(evm.allocator, args_offset + args_size);
+    // Record the dependency on the target's code (EIP-2929 account access + read).
+    _ = try evm.accessAccount(target_addr);
+    try evm.noteRead(StateKey.codeOf(target_addr));
 
-    // Get target's code
     const target_code = if (evm.accounts.get(target_addr)) |acc| acc.code else &[_]u8{};
 
-    // If no code, call succeeds with no execution
+    // If no code, call succeeds with no execution and empty return data.
     if (target_code.len == 0) {
         try evm.memory.ensureCapacity(evm.allocator, ret_offset + ret_size);
-        if (evm.return_data.len > 0) {
-            evm.allocator.free(evm.return_data);
-        }
+        if (evm.return_data.len > 0) evm.allocator.free(evm.return_data);
         evm.return_data = &[_]u8{};
         try evm.stack.push(evm.allocator, BigInt.init(1));
         return;
     }
 
-    // Calculate gas to pass
-    const gas_requested: u64 = if (gas_big.fitsInU64()) gas_big.data[0] else std.math.maxInt(u64);
-    const gas_available = evm.gas - (evm.gas / 64);
-    const call_gas = @min(gas_requested, gas_available);
-    _ = call_gas;
+    // Read calldata and run the target's code in the CURRENT contract's storage
+    // context (CALLCODE): address and storage stay this contract's; value is to
+    // self, so no balance moves between accounts.
+    var calldata = try evm.allocator.alloc(u8, args_size);
+    defer evm.allocator.free(calldata);
+    for (0..args_size) |i| calldata[i] = evm.memory.loadByte(args_offset + i);
 
-    // In a full implementation:
-    // - Execute target's code in caller's context
-    // - msg.sender = caller, storage = caller's storage
-    // - Value transfer is to self (no actual transfer)
+    const gas_requested: u64 = if (gas_big.fitsInU64()) gas_big.data[0] else std.math.maxInt(u64);
+    var call_gas = @min(gas_requested, evm.gas - evm.gas / 64);
+    if (!value_big.isZero()) call_gas += CALL_STIPEND;
+
+    const ok = try evm.runSubContext(target_code, evm.current_address, evm.current_address, value_big, calldata, evm.call_stack.isStatic(), call_gas);
 
     try evm.memory.ensureCapacity(evm.allocator, ret_offset + ret_size);
-    if (evm.return_data.len > 0) {
-        evm.allocator.free(evm.return_data);
-    }
-    evm.return_data = &[_]u8{};
+    const ncopy = @min(ret_size, evm.return_data.len);
+    for (0..ncopy) |i| try evm.memory.storeByte(evm.allocator, ret_offset + i, evm.return_data[i]);
 
-    try evm.stack.push(evm.allocator, BigInt.init(1));
+    try evm.stack.push(evm.allocator, if (ok) BigInt.init(1) else BigInt.zero());
 }

@@ -132,7 +132,7 @@ pub const CallStack = struct {
     }
 
     pub fn pop(self: *CallStack) ?CallFrame {
-        return self.frames.popOrNull();
+        return self.frames.pop();
     }
 
     pub fn current(self: *CallStack) ?*CallFrame {

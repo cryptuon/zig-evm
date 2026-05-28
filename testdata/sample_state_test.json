@@ -1,0 +1,17 @@
+{
+  "_comment": "Sample state test for the offline replay harness (zig build state-test). Structure mirrors `geth evm t8n` alloc+txs->alloc, with an explicit `from` (no signature recovery) and partial post checks. Alice sends 1000 wei to Bob, then calls a counter contract (storage[0] += 1) twice.",
+  "pre": {
+    "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1": {"balance": "0xf4240", "nonce": "0x0"},
+    "0xc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0": {"balance": "0x0", "code": "0x6000546001016000556000"}
+  },
+  "txs": [
+    {"from": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1", "to": "0xb0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0", "value": "0x3e8", "gas": "0x186a0"},
+    {"from": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1", "to": "0xc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0", "gas": "0x30d40"},
+    {"from": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1", "to": "0xc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0", "gas": "0x30d40"}
+  ],
+  "post": {
+    "0xb0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0": {"balance": "0x3e8"},
+    "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1": {"nonce": "0x3"},
+    "0xc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0": {"storage": {"0x0": "0x2"}}
+  }
+}

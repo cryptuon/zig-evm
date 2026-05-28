@@ -9,6 +9,7 @@ const OpcodeImpl = @import("../main.zig").OpcodeImpl;
 const Opcode = @import("../main.zig").Opcode;
 const BigInt = @import("../main.zig").BigInt;
 const Account = @import("../main.zig").Account;
+const StateKey = @import("../main.zig").StateKey;
 const crypto = @import("../crypto.zig");
 
 // Gas costs for CREATE
@@ -52,21 +53,16 @@ fn execute(evm: *EVM) !void {
         return;
     }
 
-    // Get sender account
-    const sender_ptr = evm.accounts.getPtr(evm.current_address);
-    if (sender_ptr == null) {
+    // Sender balance check (read through the recording helper; no account
+    // pointer is held across the map mutations that follow).
+    const sender_bal = try evm.loadBalance(evm.current_address);
+    if (sender_bal.lt(value_big)) {
         try evm.stack.push(evm.allocator, BigInt.zero());
         return;
     }
-    var sender = sender_ptr.?;
+    const sender_nonce: u64 = if (evm.accounts.get(evm.current_address)) |acc| acc.nonce else 0;
 
-    // Check if sender has sufficient balance
-    if (sender.balance.lt(value_big)) {
-        try evm.stack.push(evm.allocator, BigInt.zero());
-        return;
-    }
-
-    // Read init_code from memory
+    // Read init_code from memory.
     try evm.memory.ensureCapacity(evm.allocator, offset + size);
     var init_code = try evm.allocator.alloc(u8, size);
     defer evm.allocator.free(init_code);
@@ -74,35 +70,43 @@ fn execute(evm: *EVM) !void {
         init_code[i] = evm.memory.loadByte(offset + i);
     }
 
-    // Calculate new contract address: keccak256(rlp([sender, nonce]))[12:]
-    const new_address = crypto.createAddress(evm.current_address, sender.nonce);
+    // The created address derives from the sender's nonce, and CREATE bumps it.
+    try evm.noteRead(StateKey.nonceOf(evm.current_address));
+    const new_address = crypto.createAddress(evm.current_address, sender_nonce);
+    if (evm.accounts.getPtr(evm.current_address)) |s| s.nonce += 1;
+    try evm.noteWrite(StateKey.nonceOf(evm.current_address));
 
-    // Increment sender's nonce
-    sender.nonce += 1;
+    // Ensure the new account exists (empty) before its init code runs.
+    if (!evm.accounts.contains(new_address)) {
+        try evm.accounts.put(new_address, .{
+            .balance = BigInt.zero(),
+            .nonce = 0,
+            .code = &[_]u8{},
+            .storage = std.AutoHashMap(BigInt, BigInt).init(evm.allocator),
+        });
+    }
 
-    // Transfer value from sender to new contract
-    sender.balance = sender.balance.sub(value_big);
+    // Transfer value to the new contract (journaled; rolls back on revert).
+    if (!value_big.isZero()) {
+        try evm.storeBalance(evm.current_address, sender_bal.sub(value_big));
+        const nb = try evm.loadBalance(new_address);
+        try evm.storeBalance(new_address, nb.add(value_big));
+    }
 
-    // Create new account
-    const new_account = Account{
-        .balance = value_big,
-        .nonce = 0, // Contracts start with nonce 0 (or 1 per EIP-161)
-        .code = &[_]u8{}, // Will be set after execution
-        .storage = std.AutoHashMap(BigInt, BigInt).init(evm.allocator),
-    };
-    try evm.accounts.put(new_address, new_account);
+    // Execute the init code in the new account's context; its RETURN data
+    // becomes the deployed code. On revert the journaled state changes unwind.
+    const call_gas = evm.gas - evm.gas / 64;
+    const ok = try evm.runSubContext(init_code, new_address, evm.current_address, value_big, &[_]u8{}, false, call_gas);
+    if (!ok) {
+        try evm.stack.push(evm.allocator, BigInt.zero());
+        return;
+    }
 
-    // For a full implementation, we would:
-    // 1. Push a new call frame
-    // 2. Execute init_code
-    // 3. Use return data as the contract code
-    // 4. Handle reverts and errors
-
-    // Simplified: Store init_code directly as the contract code
-    // In a full implementation, init_code would be executed and
-    // the return data would become the contract code
-    const new_account_ptr = evm.accounts.getPtr(new_address).?;
-    new_account_ptr.code = try evm.allocator.dupe(u8, init_code);
+    if (evm.accounts.getPtr(new_address)) |acct| {
+        if (acct.code.len > 0) evm.allocator.free(acct.code);
+        acct.code = try evm.allocator.dupe(u8, evm.return_data);
+    }
+    try evm.noteWrite(StateKey.codeOf(new_address));
 
     // Push new address to stack
     var addr_bytes: [32]u8 = [_]u8{0} ** 32;

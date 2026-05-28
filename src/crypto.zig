@@ -68,9 +68,12 @@ const KeccakState = struct {
     }
 
     fn squeeze(self: *KeccakState) [32]u8 {
-        // Apply Keccak padding (0x01 for Keccak, NOT 0x06 for SHA3)
+        // Apply Keccak pad10*1 (0x01 start byte for Keccak, NOT 0x06 for SHA3).
+        // Zero the entire remaining rate first: the bytes past buffer_len are
+        // uninitialized, and the closing 0x80 must land on a clean byte (when
+        // buffer_len == RATE-1 the two pad bits share one byte: 0x01 | 0x80).
+        @memset(self.buffer[self.buffer_len..RATE], 0);
         self.buffer[self.buffer_len] = 0x01;
-        @memset(self.buffer[self.buffer_len + 1 .. RATE - 1], 0);
         self.buffer[RATE - 1] |= 0x80;
 
         self.absorbBlock();

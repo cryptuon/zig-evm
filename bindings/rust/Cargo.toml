@@ -2,8 +2,10 @@
 name = "zigevm"
 version = "0.1.0"
 edition = "2021"
-authors = ["Zig EVM Contributors"]
+authors = ["Cryptuon Research <contact@cryptuon.com>"]
 description = "High-performance EVM implementation for L2/Rollup execution"
+homepage = "https://zig-evm.cryptuon.com/"
+documentation = "https://docs.rs/zigevm"
 repository = "https://github.com/cryptuon/zig-evm"
 license = "MIT"
 keywords = ["ethereum", "evm", "blockchain", "l2", "rollup"]

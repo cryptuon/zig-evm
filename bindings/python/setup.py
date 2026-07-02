@@ -16,11 +16,17 @@ else:
 setup(
     name="zigevm",
     version="0.1.0",
-    author="Zig EVM Contributors",
+    author="Cryptuon Research",
+    author_email="contact@cryptuon.com",
     description="High-performance EVM implementation for L2/Rollup execution",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/cryptuon/zig-evm",
+    url="https://zig-evm.cryptuon.com/",
+    project_urls={
+        "Homepage": "https://zig-evm.cryptuon.com/",
+        "Documentation": "https://docs.cryptuon.com/zig-evm/",
+        "Source": "https://github.com/cryptuon/zig-evm",
+    },
     packages=find_packages(),
     python_requires=">=3.8",
     classifiers=[
@@ -36,7 +42,7 @@ setup(
         "Topic :: Software Development :: Libraries",
         "Topic :: System :: Emulators",
     ],
-    keywords="ethereum evm blockchain l2 rollup",
+    keywords=["ethereum", "evm", "blockchain", "l2", "rollup", "parallel-execution", "virtual-machine"],
     package_data={
         "zigevm": ["*.so", "*.dylib", "*.dll"],
     },

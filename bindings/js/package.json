@@ -16,11 +16,15 @@
     "rollup",
     "smart-contracts"
   ],
-  "author": "Zig EVM Contributors",
+  "author": "Cryptuon Research <contact@cryptuon.com>",
   "license": "MIT",
+  "homepage": "https://zig-evm.cryptuon.com/",
   "repository": {
     "type": "git",
     "url": "https://github.com/cryptuon/zig-evm"
+  },
+  "bugs": {
+    "url": "https://github.com/cryptuon/zig-evm/issues"
   },
   "engines": {
     "node": ">=14.0.0"

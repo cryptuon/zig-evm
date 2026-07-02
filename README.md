@@ -5,6 +5,8 @@ A high-performance, embeddable Ethereum Virtual Machine implementation in Zig, d
 [![CI](https://github.com/cryptuon/zig-evm/actions/workflows/ci.yml/badge.svg)](https://github.com/cryptuon/zig-evm/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+**[🌐 Site](https://zig-evm.cryptuon.com/) · [📚 Docs](https://docs.cryptuon.com/zig-evm/) · [🔬 Cryptuon Research](https://github.com/cryptuon)**
+
 ## Features
 
 ### Complete EVM Implementation
@@ -202,6 +204,16 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 
-- [Ethereum Yellow Paper](https://ethereum.github.io/yellowpaper/paper.pdf)(https://ethereum.github.io/yellowpaper/paper.pdf)
+- [Ethereum Yellow Paper](https://ethereum.github.io/yellowpaper/paper.pdf)
 - [EVM Opcodes Reference](https://www.evm.codes/)
 - [Zig Programming Language](https://ziglang.org/)
+
+---
+
+## Part of Cryptuon Research
+
+`zig-evm` is one of [20 open-source blockchain-infrastructure projects](https://www.cryptuon.com/projects) from **[Cryptuon Research](https://www.cryptuon.com)** — blockchain theory, shipped as protocols.
+
+**Related projects:** [SolScript](https://solscript.cryptuon.com/) · [Tesseract](https://tesseract.cryptuon.com/) · [EVMORE](https://evmore.cryptuon.com/)
+
+Docs: [docs.cryptuon.com/zig-evm](https://docs.cryptuon.com/zig-evm/) · Contact: [contact@cryptuon.com](mailto:contact@cryptuon.com)

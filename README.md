@@ -1,11 +1,53 @@
 # Zig EVM
 
-A high-performance, embeddable Ethereum Virtual Machine implementation in Zig, designed for L2/Rollup execution with parallel transaction processing.
+A high-performance, embeddable Ethereum Virtual Machine written in Zig. It runs
+independent transactions in parallel — a **measured 5-6x throughput gain over
+sequential execution** — and exposes a stable C ABI so Python, Rust,
+JavaScript, and C can embed the execution core directly. It's an execution
+engine, not a chain: link it into your L2 sequencer, rollup prover, agent
+runtime, simulator, or indexer and get parallel EVM execution without adopting
+a new network, consensus layer, or token.
 
 [![CI](https://github.com/cryptuon/zig-evm/actions/workflows/ci.yml/badge.svg)](https://github.com/cryptuon/zig-evm/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**[🌐 Site](https://zig-evm.cryptuon.com/) · [📚 Docs](https://docs.cryptuon.com/zig-evm/) · [🔬 Cryptuon Research](https://github.com/cryptuon)**
+**[🌐 Site](https://zig-evm.cryptuon.com/) · [📚 Docs](https://docs.cryptuon.com/zig-evm/) · [🗺️ Roadmap](ROADMAP.md) · [🔬 Cryptuon Research](https://github.com/cryptuon)**
+
+## Why this matters in 2026
+
+Single-threaded EVM execution has become the bottleneck. The 2026 workloads
+pushing hardest on it are new: **agentic payments** and machine-initiated,
+high-frequency transactions; **on-chain and verifiable AI** that settles
+results to the EVM; and **RWA settlement** that needs deterministic, auditable
+execution. The **parallel-EVM** wave (Monad, MegaETH, Sei, Reth's execution
+extensions) is the industry's answer — but it almost always ships as a whole
+new chain or client.
+
+Zig EVM takes the opposite approach: **the parallel execution core is a small,
+embeddable library.** Wave-based parallelism groups independent transactions
+and runs them concurrently, delivering the 5-6x throughput headroom that
+agent-driven, high-frequency workloads need — without asking you to migrate to
+a new network. If your transaction mix is largely independent (many distinct
+senders/receivers, little shared-state contention), you get most of that gain;
+if it's contention-heavy, you get less. See [Limitations](#limitations) and
+[`docs/PARALLEL.md`](docs/PARALLEL.md) for the honest version.
+
+### How it compares
+
+Qualitative positioning — Zig EVM is an *embeddable engine*, the others are
+mostly *chains or full clients*. Cross-project performance numbers vary by
+hardware and workload; treat this table as directional, not a benchmark.
+
+| Project | What it is | Parallel execution | Embeddable as a library | Notes |
+|---------|-----------|--------------------|--------------------------|-------|
+| **Zig EVM** | Embeddable EVM engine (Zig) | Wave-based, 5-6x measured on independent tx | **Yes** — stable C ABI + Python/Rust/JS bindings | Not a chain; you bring the network |
+| **Monad** | Full L1 chain / client | Optimistic parallel execution | No — you run/join the chain | High-throughput chain, not a drop-in engine |
+| **reth** (revm) | Full Ethereum execution client | Sequential by default; parallel via extensions | Partially — `revm` is embeddable in Rust | Mature, widely used reference EVM |
+| **geth** | Full Ethereum execution client | Sequential | No — client, not a library | The de-facto reference implementation |
+| **Solana SVM** | Non-EVM runtime (Sealevel) | Parallel via declared access lists | Partially (via Agave/sig) | Not EVM-compatible; different programming model |
+
+If you want an EVM you can *link into your own system* and run in parallel, Zig
+EVM occupies a spot the chains and full clients don't.
 
 ## Features
 
@@ -22,10 +64,15 @@ A high-performance, embeddable Ethereum Virtual Machine implementation in Zig, d
 - **Call stack** - Nested execution with CALL, DELEGATECALL, STATICCALL
 
 ### Parallel Execution
-- **Wave-based parallelism** - 5-6x throughput improvement
-- **O(n) dependency analysis** - Hash-based conflict detection
+- **Wave-based parallelism** - measured 5-6x throughput gain over sequential execution on independent-transaction workloads
+- **O(n) dependency analysis** - Hash-based conflict detection (address, nonce, and storage-slot conflicts)
 - **Work-stealing thread pool** - Efficient load balancing
 - **Speculative execution** - Optimistic parallelism with rollback
+
+> The speedup depends on the transaction conflict rate. Independent transfers
+> across many senders parallelize well; workloads dominated by shared state
+> (e.g. many trades against one AMM pair, or long single-sender nonce chains)
+> see far less. See [Limitations](#limitations).
 
 ### Embeddable via FFI
 - **C ABI** - Use from any language with FFI support
@@ -129,6 +176,13 @@ evm.destroy();
 
 ## Performance
 
+The headline result is a **5-6x throughput gain over sequential execution** on
+batches of largely independent transactions (8 threads). The table below is a
+representative run; absolute numbers are illustrative and depend on hardware,
+build mode, and — critically — the transaction conflict rate. Reproduce them
+with `zig build benchmark -Doptimize=ReleaseFast` and see
+[`docs/BENCHMARK.md`](docs/BENCHMARK.md) for methodology.
+
 | Transactions | Sequential | Parallel (8 threads) | Speedup |
 |-------------|------------|---------------------|---------|
 | 100         | 96.8ms     | 18.9ms              | 5.1x    |
@@ -197,6 +251,28 @@ zig-evm/
   - Python 3.8+ (Python bindings)
   - Rust 1.70+ (Rust bindings)
   - Node.js 18+ (JavaScript bindings)
+
+## Limitations
+
+Zig EVM is an execution engine under active development. Being honest about
+what it is and isn't:
+
+- **Parallel speedup is workload-dependent.** The 5-6x figure holds for
+  batches of independent transactions. High shared-state contention (hot
+  contracts, single-sender nonce chains) reduces achievable parallelism toward
+  1-2x. Measure on your own workload.
+- **Batch-level constraints.** Cross-transaction `CALL`s within the same batch,
+  `CREATE`/`CREATE2` address dependencies, and block-level operations have
+  restrictions — see the [Limitations section of `docs/PARALLEL.md`](docs/PARALLEL.md#limitations).
+- **Conformance is in progress.** Broadening Ethereum execution-spec /
+  consensus-test coverage, differential fuzzing against a reference EVM, and an
+  independent security audit are tracked roadmap items, not yet complete.
+- **Not a chain.** There's no consensus, networking, or mempool here by design.
+  You embed the engine and bring your own network.
+
+For where this is going and what "production" means for an embeddable engine,
+see the [Roadmap](ROADMAP.md) — including the **Cheapest path to production**
+section.
 
 ## License
 
